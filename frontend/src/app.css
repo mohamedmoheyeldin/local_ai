@@ -3,8 +3,19 @@ html, body, #root { width: 100%; min-width: 320px; height: 100%; margin: 0; }
 body { overflow: hidden; background: var(--bgColor-default); }
 button, input, textarea, select { font: inherit; }
 
-.app-shell { display: grid; grid-template-rows: 64px minmax(0, 1fr); height: 100dvh; color: var(--fgColor-default); background: var(--bgColor-default); }
-.app-header { display: flex; align-items: center; justify-content: space-between; min-width: 0; padding: 0 24px; border-bottom: 1px solid var(--borderColor-default); background: var(--bgColor-inset); }
+.app-shell { width: 100%; height: 100dvh; min-height: 0; overflow: hidden; color: var(--fgColor-default); background: var(--bgColor-default); }
+.app-shell > div:last-child { min-width: 0; min-height: 0; flex-direction: column; flex-wrap: nowrap; }
+.main-header-shell + div { min-height: 0; flex: 1 1 auto; flex-wrap: nowrap; }
+.main-header-shell { height: 64px; flex: 0 0 64px; margin: 0 !important; background: var(--bgColor-default); }
+.app-header { display: flex; align-items: center; justify-content: space-between; width: 100%; min-width: 0; height: 64px; padding: 0 20px; background: var(--bgColor-default); }
+.chat-title-group { display: flex; align-items: center; min-width: 0; gap: 10px; }
+.chat-title { min-width: 0; line-height: 1.2; }
+.chat-title strong, .chat-title span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-title strong { max-width: min(38vw, 520px); font-size: 14px; }
+.chat-title span { margin-top: 3px; color: var(--fgColor-muted); font-size: 11px; }
+.desktop-sidebar-open { visibility: hidden; }
+.app-shell:has(.chat-sidebar[data-is-hidden="true"]) .desktop-sidebar-open { visibility: visible; }
+.mobile-chats-open { display: none !important; }
 .app-brand { display: flex; align-items: center; min-width: 0; gap: 12px; }
 .app-brand-mark { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: var(--borderRadius-medium); color: var(--fgColor-onEmphasis); background: var(--bgColor-emphasis); }
 .app-brand-copy { min-width: 0; line-height: 1.2; }
@@ -19,7 +30,14 @@ button, input, textarea, select { font: inherit; }
 .status-indicator.starting { background: var(--fgColor-attention); box-shadow: 0 0 0 3px var(--bgColor-attention-muted); }
 .status-indicator.error { background: var(--fgColor-danger); box-shadow: 0 0 0 3px var(--bgColor-danger-muted); }
 
-.chat-main { min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--bgColor-default); }
+.chat-sidebar { overflow: hidden !important; background: var(--bgColor-inset); }
+.sidebar-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100%; min-height: 0; background: var(--bgColor-inset); }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 64px; padding: 12px; }
+.sidebar-header .app-brand-mark { width: 32px; height: 32px; }
+.sidebar-privacy { display: flex; align-items: center; gap: 7px; margin: 8px 12px 12px; padding: 10px 8px; border-top: 1px solid var(--borderColor-muted); color: var(--fgColor-muted); font-size: 11px; }
+
+.chat-main { height: 100%; min-height: 0; flex: 1 1 auto; background: var(--bgColor-default); }
+.chat-main > div { display: grid; grid-template-rows: minmax(0, 1fr) auto; width: 100%; height: 100%; min-height: 0; padding: 0; }
 .message-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .message-list { width: min(100%, 980px); min-height: 100%; margin: 0 auto; padding: 36px 24px 30px; }
 .message-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: start; gap: 12px; margin: 0 0 28px; }
@@ -150,9 +168,14 @@ button, input, textarea, select { font: inherit; }
 .audit-event summary span { color: var(--fgColor-muted); font-size: 12px; }
 .audit-event pre { max-height: 280px; margin: 0; padding: 12px; overflow: auto; border-top: 1px solid var(--borderColor-muted); background: var(--bgColor-inset); font-size: 12px; }
 
-.conversation-list { display: grid; gap: 4px; margin-top: 14px; }
+.conversation-browser { display: grid; min-height: 0; gap: 12px; }
+.conversation-browser.compact { grid-template-rows: auto auto minmax(0, 1fr); padding: 0 8px; }
+.conversation-browser.compact .conversation-list { min-height: 0; margin: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.conversation-browser.compact .empty-state { min-height: 130px; padding: 18px 12px; border: 0; }
+.conversation-list { display: grid; align-content: start; gap: 4px; margin-top: 2px; }
 .conversation-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 4px; border-radius: var(--borderRadius-medium); }
-.conversation-item:hover, .conversation-item.active { background: var(--bgColor-muted); }
+.conversation-item:hover, .conversation-item.active { background: var(--control-transparent-bgColor-hover, var(--bgColor-muted)); }
+.conversation-item.active { box-shadow: inset 2px 0 0 var(--borderColor-accent-emphasis); }
 .conversation-select { min-width: 0; padding: 8px; border: 0; color: var(--fgColor-default); background: transparent; text-align: left; cursor: pointer; }
 .conversation-select strong, .conversation-select span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conversation-select span { margin-top: 4px; color: var(--fgColor-muted); font-size: 12px; }
@@ -161,9 +184,12 @@ button, input, textarea, select { font: inherit; }
 .handoff-preview { width: 100% !important; min-height: 360px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important; font-size: 12px !important; }
 
 @media (max-width: 767px) {
-  .app-shell { grid-template-rows: 56px minmax(0, 1fr); }
-  .app-header { padding: 0 12px; }
-  .app-brand-copy span, .runtime-pill, .header-button-label { display: none; }
+  .main-header-shell { height: 56px; flex-basis: 56px; }
+  .app-header { height: 56px; padding: 0 10px; }
+  .desktop-sidebar-open { display: none !important; }
+  .mobile-chats-open { display: inline-grid !important; }
+  .chat-title strong { max-width: min(36vw, 220px); }
+  .chat-title span, .runtime-pill, .header-button-label { display: none; }
   .header-actions { gap: 4px; }
   .message-list { padding: 24px 14px 20px; }
   .message-row { grid-template-columns: 28px minmax(0, 1fr); gap: 9px; margin-bottom: 22px; }

@@ -23,20 +23,30 @@ test('clean chat shell and settings remain usable', async ({ page }) => {
   await expect(dialog.getByRole('button', { name: 'Save account' })).toBeDisabled()
 })
 
-test('chat drawer and composer fit the viewport', async ({ page }) => {
+test('chat sidebar and mobile drawer fit the viewport', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Chats' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Conversations' })
-  await expect(dialog).toBeVisible()
   const viewport = page.viewportSize()
-  await expect.poll(async () => {
-    const box = await dialog.boundingBox()
-    return Boolean(box && box.x >= 0 && box.x + box.width <= viewport.width + 1)
-  }).toBe(true)
-  const drawer = await dialog.boundingBox()
-  expect(drawer.x).toBeGreaterThanOrEqual(0)
-  expect(drawer.x + drawer.width).toBeLessThanOrEqual(viewport.width)
-  await dialog.getByRole('button', { name: 'Close' }).click()
+  if (viewport.width >= 768) {
+    const sidebar = page.getByRole('complementary', { name: 'Chat history' })
+    await expect(sidebar).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: 'New chat' })).toBeVisible()
+    await sidebar.getByRole('button', { name: 'Hide chat sidebar' }).click()
+    await expect(sidebar).toBeHidden()
+    await page.getByRole('button', { name: 'Show chat sidebar' }).click()
+    await expect(sidebar).toBeVisible()
+  } else {
+    await page.getByRole('button', { name: 'Open chats' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Chats' })
+    await expect(dialog).toBeVisible()
+    await expect.poll(async () => {
+      const box = await dialog.boundingBox()
+      return Boolean(box && box.x >= 0 && box.x + box.width <= viewport.width + 1)
+    }).toBe(true)
+    const drawer = await dialog.boundingBox()
+    expect(drawer.x).toBeGreaterThanOrEqual(0)
+    expect(drawer.x + drawer.width).toBeLessThanOrEqual(viewport.width)
+    await dialog.getByRole('button', { name: 'Close' }).click()
+  }
   await expect(page.getByLabel('Message Local AI')).toBeVisible()
 })
 

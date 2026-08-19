@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { ActionList, ActionMenu, Button, Flash, IconButton, Spinner, Textarea, useConfirm } from '@primer/react'
-import { AgentIcon, CloudIcon, CommentDiscussionIcon, DeviceDesktopIcon, GearIcon, HubotIcon, LockIcon, MoonIcon, PaperAirplaneIcon, PersonIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
+import { ActionList, ActionMenu, Button, Flash, IconButton, PageLayout, Spinner, Textarea, useConfirm } from '@primer/react'
+import { AgentIcon, CloudIcon, CommentDiscussionIcon, DeviceDesktopIcon, GearIcon, HubotIcon, LockIcon, MoonIcon, PaperAirplaneIcon, PersonIcon, SidebarCollapseIcon, SidebarExpandIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
 import { api } from './api.js'
 import AttachmentMenu from './AttachmentMenu.jsx'
+import ConversationList from './ConversationList.jsx'
 
 const MessageContent = lazy(() => import('./MessageContent.jsx'))
 const ConversationDrawer = lazy(() => import('./ConversationDrawer.jsx'))
@@ -15,17 +16,31 @@ function ThemeMenu({ colorMode, setColorMode }) {
   return <ActionMenu><ActionMenu.Button aria-label="Theme" leadingVisual={ActiveIcon}><span className="header-button-label">Theme</span></ActionMenu.Button><ActionMenu.Overlay align="end"><ActionList selectionVariant="single">{choices.map(([id, label, Icon]) => <ActionList.Item key={id} selected={colorMode === id} onSelect={() => setColorMode(id)}><ActionList.LeadingVisual><Icon /></ActionList.LeadingVisual>{label}</ActionList.Item>)}</ActionList></ActionMenu.Overlay></ActionMenu>
 }
 
-function AppHeader({ runtime, messages, colorMode, setColorMode, onChats, onHandoff, onSettings }) {
-  return <header className="app-header">
-    <div className="app-brand"><span className="app-brand-mark"><AgentIcon size={22} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Private workspace · loopback only</span></div></div>
+function AppHeader({ runtime, messages, title, sidebarCollapsed, colorMode, setColorMode, onShowSidebar, onMobileChats, onHandoff, onSettings }) {
+  return <div className="app-header">
+    <div className="chat-title-group">
+      <IconButton className="desktop-sidebar-open" icon={SidebarExpandIcon} aria-label="Show chat sidebar" aria-controls="chat-sidebar" aria-expanded={!sidebarCollapsed} onClick={onShowSidebar} />
+      <IconButton className="mobile-chats-open" icon={CommentDiscussionIcon} aria-label="Open chats" onClick={onMobileChats} />
+      <div className="chat-title"><strong>{title}</strong><span>Local AI</span></div>
+    </div>
     <div className="header-actions">
       <div className="runtime-pill"><span className={`status-indicator ${runtime.state}`}></span><span>{runtime.state === 'checking' ? 'Checking local model…' : runtime.healthy ? runtime.model?.display_name || 'Local model ready' : 'Model unavailable'}</span></div>
-      <Button aria-label="Chats" leadingVisual={CommentDiscussionIcon} onClick={onChats}><span className="header-button-label">Chats</span></Button>
       <Button aria-label="Cloud handoff" leadingVisual={CloudIcon} onClick={onHandoff} disabled={!messages.length}><span className="header-button-label">Cloud handoff</span></Button>
       <ThemeMenu colorMode={colorMode} setColorMode={setColorMode} />
       <IconButton icon={GearIcon} aria-label="Settings" onClick={onSettings} />
     </div>
-  </header>
+  </div>
+}
+
+function AppSidebar({ conversations, currentId, onSelect, onNew, onArchive, onDelete, onSearch, onCollapse }) {
+  return <aside className="sidebar-shell" aria-label="Chat history">
+    <div className="sidebar-header">
+      <div className="app-brand"><span className="app-brand-mark"><AgentIcon size={20} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Private workspace</span></div></div>
+      <IconButton icon={SidebarCollapseIcon} variant="invisible" aria-label="Hide chat sidebar" aria-controls="chat-sidebar" aria-expanded="true" onClick={onCollapse} />
+    </div>
+    <ConversationList compact conversations={conversations} currentId={currentId} onSelect={onSelect} onNew={onNew} onArchive={onArchive} onDelete={onDelete} onSearch={onSearch} />
+    <div className="sidebar-privacy"><LockIcon size={12} /><span>Chats stay on this computer</span></div>
+  </aside>
 }
 
 export default function App({ colorMode, setColorMode }) {
@@ -50,12 +65,15 @@ export default function App({ colorMode, setColorMode }) {
   const [notice, setNotice] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [conversationsOpen, setConversationsOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('local-ai-sidebar-collapsed') === 'true')
   const [handoffOpen, setHandoffOpen] = useState(false)
   const [pendingTool, setPendingTool] = useState(null)
   const scrollRef = useRef(null)
   const followLatestRef = useRef(true)
   const abortRef = useRef(null)
   const confirm = useConfirm()
+
+  useEffect(() => { localStorage.setItem('local-ai-sidebar-collapsed', String(sidebarCollapsed)) }, [sidebarCollapsed])
 
   const load = useCallback(async () => {
     const results = await Promise.allSettled([
@@ -203,9 +221,17 @@ export default function App({ colorMode, setColorMode }) {
   async function send(event) { event?.preventDefault(); const text = input.trim(); if (text) await runMessage(text) }
   async function approveTool() { const pending = pendingTool; if (!pending) return; setBusy(true); try { const data = await api(`/api/mcp-servers/${pending.server_id}/call`, { method: 'POST', body: JSON.stringify({ tool_name: pending.tool_name, arguments: pending.arguments, approved: true, conversation_id: conversationId }) }); const toolMessage = { role: 'tool', content: JSON.stringify(data.result, null, 2), metadata: { server_name: pending.server_name, tool_name: pending.tool_name } }; const history = [...messages.filter(message => message.content), toolMessage]; setMessages(history); setPendingTool(null); setBusy(false); await runMessage('Continue the original task using the approved tool result.', history) } catch (error) { setNotice(error.message); setBusy(false) } }
 
-  return <div className="app-shell">
-    <AppHeader runtime={runtime} messages={messages} colorMode={colorMode} setColorMode={setColorMode} onChats={() => setConversationsOpen(true)} onHandoff={() => setHandoffOpen(true)} onSettings={() => setSettingsOpen(true)} />
-    <main className="chat-main">
+  const currentTitle = conversations.find(item => item.id === conversationId)?.title || 'New chat'
+
+  return <>
+    <PageLayout className="app-shell" containerWidth="full" padding="none" rowGap="none" columnGap="none">
+      <PageLayout.Sidebar id="chat-sidebar" className="chat-sidebar" aria-label="Chat history" width={{ min: '248px', default: '280px', max: '320px' }} padding="none" divider="line" hidden={sidebarCollapsed ? true : { narrow: true }}>
+        <AppSidebar conversations={conversations} currentId={conversationId} onSelect={selectConversation} onNew={newConversation} onArchive={archiveConversation} onDelete={removeConversation} onSearch={searchConversations} onCollapse={() => setSidebarCollapsed(true)} />
+      </PageLayout.Sidebar>
+      <PageLayout.Header className="main-header-shell" padding="none" divider="line">
+        <AppHeader runtime={runtime} messages={messages} title={currentTitle} sidebarCollapsed={sidebarCollapsed} colorMode={colorMode} setColorMode={setColorMode} onShowSidebar={() => setSidebarCollapsed(false)} onMobileChats={() => setConversationsOpen(true)} onHandoff={() => setHandoffOpen(true)} onSettings={() => setSettingsOpen(true)} />
+      </PageLayout.Header>
+      <PageLayout.Content className="chat-main" width="full" padding="none">
       <div className="message-scroll" ref={scrollRef} onScroll={event => {
         const viewport = event.currentTarget
         followLatestRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120
@@ -226,11 +252,12 @@ export default function App({ colorMode, setColorMode }) {
         </form>
         <div className="composer-note"><LockIcon size={12} /> Models, resources, and conversations stay on this computer.</div>
       </div></div>
-    </main>
+      </PageLayout.Content>
+    </PageLayout>
     <Suspense fallback={null}>
       {conversationsOpen && <ConversationDrawer open onClose={() => setConversationsOpen(false)} conversations={conversations} currentId={conversationId} onSelect={selectConversation} onNew={newConversation} onArchive={archiveConversation} onDelete={removeConversation} onSearch={searchConversations} />}
       {handoffOpen && <HandoffDialog open onClose={() => setHandoffOpen(false)} messages={messages.filter(message => message.content)} runtime={runtime} workspaces={workspaces} conversationId={conversationId} />}
       {settingsOpen && <SettingsDialog open onClose={() => setSettingsOpen(false)} models={models} settings={settings} runtime={runtime} resources={resources} mcpServers={mcpServers} providers={providers} workspaces={workspaces} audit={audit} metrics={metrics} hostProfile={hostProfile} onRefresh={refreshModels} onSelect={selectModel} onRuntime={changeRuntime} onSave={saveSettings} onAddResource={addResource} onEditResource={editResource} onDuplicateResource={duplicateResource} onDeleteResource={removeResource} onAddMcpServer={addMcpServer} onEditMcpServer={editMcpServer} onDuplicateMcpServer={duplicateMcpServer} onDeleteMcpServer={removeMcpServer} onRevokeMcpServer={revokeMcpServer} onToggleMcpServer={toggleMcpServer} onTestMcpServer={testMcpServer} onOAuthMcpServer={oauthMcpServer} onAddWorkspace={addWorkspace} onSelectWorkspace={chooseWorkspace} onDeleteWorkspace={removeWorkspace} onRefreshAudit={refreshAudit} onClearAudit={clearAudit} onBackup={downloadBackup} onRestore={restoreBackup} onRefreshMetrics={refreshMetrics} onRefreshHostProfile={refreshHostProfile} onApplyHostRecommendations={applyHostRecommendations} onPreset={applyPreset} busy={busy || generating} />}
     </Suspense>
-  </div>
+  </>
 }
