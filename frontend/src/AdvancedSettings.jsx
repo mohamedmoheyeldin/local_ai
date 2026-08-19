@@ -32,12 +32,12 @@ export function DataSettings({ onBackup, onRestore, busy }) {
   const [restoreFile, setRestoreFile] = useState(null)
   return <div className="settings-section">
     <SectionHeading title="Backup & restore" description="Create one encrypted backup containing settings, conversations, workspaces, MCP configuration, and credentials." />
-    <Flash variant="warning" className="privacy-banner"><ShieldLockIcon size={16} /> <strong>Keep your passphrase safe.</strong> It cannot be recovered, and restore replaces current local data.</Flash>
-    <Field label="Backup passphrase" caption="Use at least 10 characters."><TextInput block type="password" value={passphrase} onChange={event => setPassphrase(event.target.value)} minLength={10} autoComplete="new-password" /></Field>
+    <Flash variant="warning" className="privacy-banner"><ShieldLockIcon size={16} /> <strong>The passphrase is optional.</strong> Without one, anyone who gets the backup file can restore its private data and credentials.</Flash>
+    <Field label="Backup passphrase" caption="Optional—use any length. A longer unique passphrase provides stronger protection."><TextInput block type="password" value={passphrase} onChange={event => setPassphrase(event.target.value)} autoComplete="new-password" /></Field>
     <FormActions>
-      <Button variant="primary" leadingVisual={DownloadIcon} disabled={busy || passphrase.length < 10} onClick={() => onBackup(passphrase)}>Download encrypted backup</Button>
+      <Button variant="primary" leadingVisual={DownloadIcon} disabled={busy} onClick={() => onBackup(passphrase)}>Download encrypted backup</Button>
       <Button as="label" leadingVisual={FileIcon}>Choose backup<input hidden type="file" accept=".laibak" onChange={event => setRestoreFile(event.target.files?.[0] || null)} /></Button>
-      <Button variant="danger" disabled={busy || !restoreFile || passphrase.length < 10} onClick={() => onRestore(restoreFile, passphrase)}>Restore and replace</Button>
+      <Button variant="danger" disabled={busy || !restoreFile} onClick={() => onRestore(restoreFile, passphrase)}>Restore and replace</Button>
     </FormActions>
     {restoreFile && <Flash sx={{ mt: 3 }}>Selected: {restoreFile.name}</Flash>}
   </div>

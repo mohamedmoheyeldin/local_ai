@@ -17,8 +17,6 @@ MAGIC = b"PLAIBAK1"
 
 
 def _key(passphrase: str, salt: bytes) -> bytes:
-    if len(passphrase) < 10:
-        raise ValueError("Backup passphrase must contain at least 10 characters")
     return PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=600_000).derive(passphrase.encode())
 
 

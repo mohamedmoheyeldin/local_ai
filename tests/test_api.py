@@ -351,6 +351,10 @@ def test_workspace_provider_metrics_and_encrypted_backup() -> None:
             metrics = client.get("/api/runtime/metrics").json()
             assert "balanced" in metrics["presets"]
             assert client.post("/api/runtime/presets/low-memory").status_code == 200
+
+            passwordless_backup = client.post("/api/backup", json={"passphrase": ""})
+            assert passwordless_backup.status_code == 200
+            assert passwordless_backup.content.startswith(b"PLAIBAK1")
             backup = client.post("/api/backup", json={"passphrase": "correct horse battery staple"})
             assert backup.status_code == 200
             assert backup.content.startswith(b"PLAIBAK1")

@@ -223,7 +223,7 @@ class WorkspaceCreate(BaseModel):
 
 
 class BackupRequest(BaseModel):
-    passphrase: str = Field(min_length=10, max_length=500)
+    passphrase: str = ""
 
 
 class RestoreRequest(BackupRequest):
