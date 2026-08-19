@@ -185,6 +185,7 @@ class LlamaManager:
                 "-c", str(settings["context_size"]),
                 "-np", str(settings["parallel"]),
                 "-ngl", str(settings["gpu_layers"]),
+                "--no-webui",
             ]
         )
         if int(settings.get("threads", 0)) > 0:

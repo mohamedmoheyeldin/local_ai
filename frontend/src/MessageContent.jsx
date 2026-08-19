@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, ButtonGroup, Details } from '@primer/react'
-import { CopyIcon, DownloadIcon } from '@primer/octicons-react'
+import { CopyIcon, DownloadIcon, SyncIcon } from '@primer/octicons-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -19,10 +19,11 @@ function CodeBlock({ className, children, ...props }) {
   return <div className="code-block"><div className="code-block-toolbar"><ButtonGroup><Button size="small" variant="invisible" leadingVisual={CopyIcon} onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200) }}>{copied ? 'Copied' : 'Copy'}</Button><Button size="small" variant="invisible" leadingVisual={DownloadIcon} onClick={() => download(text, `generated-code.${extension}`)}>Download</Button></ButtonGroup></div><pre><code className={className} {...props}>{children}</code></pre></div>
 }
 
-export default function MessageContent({ message }) {
+export default function MessageContent({ message, canRetry = false, onRetry }) {
+  const [copied, setCopied] = useState(false)
   if (message.role === 'tool') {
     const label = message.metadata?.tool_name || 'Tool result'
     return <Details className="tool-result" open><summary>{message.metadata?.server_name ? `${message.metadata.server_name} · ` : ''}{label}</summary><pre>{message.content}</pre></Details>
   }
-  return <div className="message-content markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ code: CodeBlock, a: props => <a {...props} target="_blank" rel="noreferrer" /> }}>{message.content}</ReactMarkdown>{message.role === 'assistant' && message.content && <div className="response-actions"><Button size="small" variant="invisible" leadingVisual={DownloadIcon} onClick={() => download(message.content, `local-ai-response-${Date.now()}.md`, 'text/markdown')}>Download</Button></div>}</div>
+  return <div className="message-content markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={{ code: CodeBlock, a: props => <a {...props} target="_blank" rel="noreferrer" /> }}>{message.content}</ReactMarkdown>{message.role === 'assistant' && message.content && <div className="response-actions"><Button size="small" variant="invisible" leadingVisual={CopyIcon} onClick={async () => { await navigator.clipboard.writeText(message.content); setCopied(true); setTimeout(() => setCopied(false), 1200) }}>{copied ? 'Copied' : 'Copy'}</Button>{canRetry && <Button size="small" variant="invisible" leadingVisual={SyncIcon} onClick={onRetry}>Try again</Button>}<Button size="small" variant="invisible" leadingVisual={DownloadIcon} onClick={() => download(message.content, `local-ai-response-${Date.now()}.md`, 'text/markdown')}>Download</Button></div>}</div>
 }

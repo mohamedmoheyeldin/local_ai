@@ -40,6 +40,7 @@ def test_llama_command_uses_selected_local_model_without_shell(tmp_path: Path) -
     assert command[command.index("-m") + 1] == str(model)
     assert ["--host", "127.0.0.1"] == command[command.index("--host"):command.index("--host") + 2]
     assert "--flash-attn" in command
+    assert "--no-webui" in command
 
 
 def test_llama_status_reports_the_model_loaded_by_the_server() -> None:

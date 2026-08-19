@@ -113,6 +113,34 @@ def test_mcp_server_secrets_are_masked_and_state_can_change() -> None:
         assert client.delete(f"/api/mcp-servers/{server['id']}").status_code == 200
 
 
+def test_multiple_accounts_for_the_same_mcp_provider_are_independent() -> None:
+    with TestClient(app) as client:
+        personal = client.post("/api/mcp-servers", json={
+            "name": "Gmail", "provider_id": "gmail", "account_label": "Personal",
+            "category": "Productivity", "transport": "streamable-http",
+            "endpoint": "https://mcp.example.test/gmail", "auth_type": "bearer",
+            "secrets": {"access_token": "personal-secret"},
+        })
+        work = client.post("/api/mcp-servers", json={
+            "name": "Gmail", "provider_id": "gmail", "account_label": "Work",
+            "category": "Productivity", "transport": "streamable-http",
+            "endpoint": "https://mcp.example.test/gmail", "auth_type": "bearer",
+            "secrets": {"access_token": "work-secret"},
+        })
+        assert personal.status_code == 201 and work.status_code == 201
+        assert personal.json()["id"] != work.json()["id"]
+        accounts = [item for item in client.get("/api/mcp-servers").json()["servers"] if item["provider_id"] == "gmail"]
+        assert {item["account_label"] for item in accounts} >= {"Personal", "Work"}
+        assert "personal-secret" not in client.get("/api/mcp-servers").text
+        assert "work-secret" not in client.get("/api/mcp-servers").text
+
+        assert client.delete(f"/api/mcp-servers/{personal.json()['id']}/credentials").status_code == 200
+        remaining = next(item for item in client.get("/api/mcp-servers").json()["servers"] if item["id"] == work.json()["id"])
+        assert remaining["has_secrets"] is True
+        client.delete(f"/api/mcp-servers/{personal.json()['id']}")
+        client.delete(f"/api/mcp-servers/{work.json()['id']}")
+
+
 def test_conversations_persist_search_archive_and_export() -> None:
     with TestClient(app) as client:
         created = client.post("/api/conversations", json={"title": "Trip research"})
@@ -150,7 +178,8 @@ def test_files_and_folders_are_indexed_retrieved_and_removed() -> None:
         assert sources[0]["relative_path"] == "docs/architecture.md"
         with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
              patch("backend.app.main.list_resources", return_value=[]), \
-             patch("backend.app.main.list_mcp_servers", return_value=[]):
+             patch("backend.app.main.list_mcp_servers", return_value=[]), \
+             patch("backend.app.main.research_web", return_value={"context": "Current public web context", "sources": []}):
             _, payload = prepare_chat(ChatRequest(
                 conversation_id=conversation_id,
                 messages=[{"role": "user", "content": "Which circuit breaker handles payments?"}],
@@ -236,6 +265,48 @@ def test_mcp_tool_call_requires_explicit_approval_and_execute_permission() -> No
         client.delete(f"/api/mcp-servers/{server['id']}")
 
 
+def test_local_workspace_tools_require_approval_and_support_files_and_commands() -> None:
+    project_root = Path.home() / "projects"
+    project_root.mkdir(exist_ok=True)
+    workspace_path = Path(tempfile.mkdtemp(prefix="local-ai-tools-", dir=project_root))
+    try:
+        with TestClient(app) as client:
+            workspace = client.post("/api/workspaces", json={"name": "Tool workspace", "path": str(workspace_path)}).json()
+            client.patch(f"/api/workspaces/{workspace['id']}/select")
+            request = {"tool_name": "local_write_file", "arguments": {"path": "notes/todo.txt", "content": "first"}}
+            assert client.post("/api/local-tools/call", json=request).status_code == 409
+            written = client.post("/api/local-tools/call", json={**request, "approved": True})
+            assert written.status_code == 200
+            assert (workspace_path / "notes" / "todo.txt").read_text() == "first"
+            changed = client.post("/api/local-tools/call", json={
+                "tool_name": "local_replace_in_file", "approved": True,
+                "arguments": {"path": "notes/todo.txt", "old_text": "first", "new_text": "finished"},
+            })
+            assert changed.json()["result"]["replacements"] == 1
+            command = client.post("/api/local-tools/call", json={
+                "tool_name": "local_run_command", "approved": True,
+                "arguments": {"command": "printf command-ok", "cwd": "."},
+            })
+            assert command.json()["result"]["stdout"] == "command-ok"
+            escaped = client.post("/api/local-tools/call", json={
+                "tool_name": "local_read_file", "approved": True,
+                "arguments": {"path": "../../outside.txt"},
+            })
+            assert escaped.status_code == 400
+            deleted = client.post("/api/local-tools/call", json={
+                "tool_name": "local_delete_path", "approved": True,
+                "arguments": {"path": "notes", "recursive": True},
+            })
+            assert deleted.json()["result"]["deleted"] is True
+            assert not (workspace_path / "notes").exists()
+            audit = client.get("/api/mcp-audit").json()["events"]
+            assert any(item["server_name"] == "Local workspace" and item["tool_name"] == "local_run_command" for item in audit)
+            client.delete(f"/api/workspaces/{workspace['id']}")
+    finally:
+        if workspace_path.exists():
+            workspace_path.rmdir()
+
+
 def test_mcp_connection_test_records_discovered_capabilities() -> None:
     with TestClient(app) as client:
         server = client.post("/api/mcp-servers", json={
@@ -266,10 +337,58 @@ def test_enabled_mcp_tools_are_offered_to_local_model_with_safe_mapping() -> Non
     }
     with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
          patch("backend.app.main.list_resources", return_value=[]), \
-         patch("backend.app.main.list_mcp_servers", return_value=[server]):
+         patch("backend.app.main.list_mcp_servers", return_value=[server]), \
+         patch("backend.app.main.research_web", return_value={"context": "Current public web context", "sources": []}):
         _, payload = prepare_chat(request)
     assert payload["tools"][0]["function"]["name"] == "mcp_7_search_files"
     assert payload["_mcp_tool_map"]["mcp_7_search_files"]["tool_name"] == "search/files"
+
+
+def test_selected_workspace_tools_are_offered_to_the_local_model() -> None:
+    from backend.app.main import ChatRequest, prepare_chat
+    workspace = {"id": 2, "name": "Project", "path": "/home/user/project", "selected": True, "approved": True}
+    with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
+         patch("backend.app.main.list_resources", return_value=[]), \
+         patch("backend.app.main.list_mcp_servers", return_value=[]), \
+         patch("backend.app.main.list_workspaces", return_value=[workspace]), \
+         patch("backend.app.main.research_web", return_value={"context": "Current public web context", "sources": []}):
+        _, payload = prepare_chat(ChatRequest(messages=[{"role": "user", "content": "Create a file"}]))
+    names = {tool["function"]["name"] for tool in payload["tools"]}
+    assert {"local_write_file", "local_delete_path", "local_run_command"} <= names
+    assert payload["_mcp_tool_map"]["local_run_command"]["local"] is True
+    assert any("approved this local workspace" in message["content"] for message in payload["messages"] if message["role"] == "system")
+
+
+def test_every_chat_researches_the_latest_user_question_before_model_inference() -> None:
+    from backend.app.main import ChatRequest, prepare_chat
+    request = ChatRequest(messages=[
+        {"role": "user", "content": "What can you do?"},
+        {"role": "assistant", "content": "I can help."},
+        {"role": "user", "content": "What is the weather today?"},
+    ])
+    research = {"context": "Live results checked today\nURL: https://weather.example.com", "sources": [{"url": "https://weather.example.com"}]}
+    with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
+         patch("backend.app.main.list_resources", return_value=[]), \
+         patch("backend.app.main.list_mcp_servers", return_value=[]), \
+         patch("backend.app.main.research_web", return_value=research) as web:
+        _, payload = prepare_chat(request)
+    web.assert_called_once_with("What is the weather today?")
+    assert payload["messages"][0] == {"role": "system", "content": research["context"]}
+
+
+def test_web_research_context_requires_citations_and_handles_failure_honestly() -> None:
+    from backend.app.services.web_research import _prompt_context, _search_query
+    assert _search_query("What is the current weather in New York City? Answer briefly and cite your current sources.") == "current weather in New York City today"
+    assert _search_query("Can you tell me the latest Python release? Cite sources.").endswith(str(time.localtime().tm_year))
+    success = _prompt_context("latest release", [{
+        "title": "Official release", "url": "https://example.com/release", "snippet": "Released today",
+    }])
+    assert "Markdown links" in success
+    assert "Never say that you lack internet" in success
+    assert "https://example.com/release" in success
+    failure = _prompt_context("weather", [], "provider timeout")
+    assert "live research failed for this reply" in failure
+    assert "provider timeout" in failure
 
 
 def test_resources_can_be_edited_and_duplicated_without_erasing_saved_password() -> None:
@@ -323,6 +442,10 @@ def test_workspace_provider_metrics_and_encrypted_backup() -> None:
             metrics = client.get("/api/runtime/metrics").json()
             assert "balanced" in metrics["presets"]
             assert client.post("/api/runtime/presets/low-memory").status_code == 200
+
+            passwordless_backup = client.post("/api/backup", json={"passphrase": ""})
+            assert passwordless_backup.status_code == 200
+            assert passwordless_backup.content.startswith(b"PLAIBAK1")
             backup = client.post("/api/backup", json={"passphrase": "correct horse battery staple"})
             assert backup.status_code == 200
             assert backup.content.startswith(b"PLAIBAK1")

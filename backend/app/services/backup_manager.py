@@ -17,8 +17,6 @@ MAGIC = b"PLAIBAK1"
 
 
 def _key(passphrase: str, salt: bytes) -> bytes:
-    if len(passphrase) < 10:
-        raise ValueError("Backup passphrase must contain at least 10 characters")
     return PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=600_000).derive(passphrase.encode())
 
 
@@ -83,9 +81,9 @@ def restore(payload: bytes, passphrase: str) -> dict[str, int]:
             )
         for item in data.get("mcp_servers", []):
             database.execute(
-                """INSERT INTO mcp_servers(id,name,category,description,enabled,transport,endpoint,command,arguments,working_directory,auth_type,public_config,secret_config,permissions,connection_status,last_error,capabilities,last_connected)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (item["id"], item["name"], item.get("category", "custom"), item.get("description", ""), int(item.get("enabled", False)), item["transport"], item.get("endpoint", ""), item.get("command", ""), item.get("arguments", ""), item.get("working_directory", ""), item.get("auth_type", "none"), json.dumps(item.get("public_config", {})), "{}", json.dumps(item.get("permissions", {})), "not-tested", "", "{}", None),
+                """INSERT INTO mcp_servers(id,name,provider_id,account_label,category,description,enabled,transport,endpoint,command,arguments,working_directory,auth_type,public_config,secret_config,permissions,connection_status,last_error,capabilities,last_connected)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (item["id"], item["name"], item.get("provider_id", ""), item.get("account_label", ""), item.get("category", "custom"), item.get("description", ""), int(item.get("enabled", False)), item["transport"], item.get("endpoint", ""), item.get("command", ""), item.get("arguments", ""), item.get("working_directory", ""), item.get("auth_type", "none"), json.dumps(item.get("public_config", {})), "{}", json.dumps(item.get("permissions", {})), "not-tested", "", "{}", None),
             )
         for item in data.get("workspaces", []):
             database.execute("INSERT INTO workspaces(id,name,path,approved,selected) VALUES(?,?,?,?,?)", (item["id"], item["name"], item["path"], int(item.get("approved", True)), int(item.get("selected", False))))
