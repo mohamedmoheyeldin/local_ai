@@ -178,7 +178,8 @@ def test_files_and_folders_are_indexed_retrieved_and_removed() -> None:
         assert sources[0]["relative_path"] == "docs/architecture.md"
         with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
              patch("backend.app.main.list_resources", return_value=[]), \
-             patch("backend.app.main.list_mcp_servers", return_value=[]):
+             patch("backend.app.main.list_mcp_servers", return_value=[]), \
+             patch("backend.app.main.research_web", return_value={"context": "Current public web context", "sources": []}):
             _, payload = prepare_chat(ChatRequest(
                 conversation_id=conversation_id,
                 messages=[{"role": "user", "content": "Which circuit breaker handles payments?"}],
@@ -294,10 +295,43 @@ def test_enabled_mcp_tools_are_offered_to_local_model_with_safe_mapping() -> Non
     }
     with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
          patch("backend.app.main.list_resources", return_value=[]), \
-         patch("backend.app.main.list_mcp_servers", return_value=[server]):
+         patch("backend.app.main.list_mcp_servers", return_value=[server]), \
+         patch("backend.app.main.research_web", return_value={"context": "Current public web context", "sources": []}):
         _, payload = prepare_chat(request)
     assert payload["tools"][0]["function"]["name"] == "mcp_7_search_files"
     assert payload["_mcp_tool_map"]["mcp_7_search_files"]["tool_name"] == "search/files"
+
+
+def test_every_chat_researches_the_latest_user_question_before_model_inference() -> None:
+    from backend.app.main import ChatRequest, prepare_chat
+    request = ChatRequest(messages=[
+        {"role": "user", "content": "What can you do?"},
+        {"role": "assistant", "content": "I can help."},
+        {"role": "user", "content": "What is the weather today?"},
+    ])
+    research = {"context": "Live results checked today\nURL: https://weather.example.com", "sources": [{"url": "https://weather.example.com"}]}
+    with patch("backend.app.main.manager.status", return_value={"healthy": True, "endpoint": "http://127.0.0.1:8080"}), \
+         patch("backend.app.main.list_resources", return_value=[]), \
+         patch("backend.app.main.list_mcp_servers", return_value=[]), \
+         patch("backend.app.main.research_web", return_value=research) as web:
+        _, payload = prepare_chat(request)
+    web.assert_called_once_with("What is the weather today?")
+    assert payload["messages"][0] == {"role": "system", "content": research["context"]}
+
+
+def test_web_research_context_requires_citations_and_handles_failure_honestly() -> None:
+    from backend.app.services.web_research import _prompt_context, _search_query
+    assert _search_query("What is the current weather in New York City? Answer briefly and cite your current sources.") == "current weather in New York City today"
+    assert _search_query("Can you tell me the latest Python release? Cite sources.").endswith(str(time.localtime().tm_year))
+    success = _prompt_context("latest release", [{
+        "title": "Official release", "url": "https://example.com/release", "snippet": "Released today",
+    }])
+    assert "Markdown links" in success
+    assert "Never say that you lack internet" in success
+    assert "https://example.com/release" in success
+    failure = _prompt_context("weather", [], "provider timeout")
+    assert "live research failed for this reply" in failure
+    assert "provider timeout" in failure
 
 
 def test_resources_can_be_edited_and_duplicated_without_erasing_saved_password() -> None:

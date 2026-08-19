@@ -22,6 +22,8 @@ large user-supplied component is a licensed `.gguf` model.
 - Local website/service resources with credentials kept in the OS keyring when available,
   or an encrypted owner-only local vault as the headless fallback
 - Streaming chat with stop-generation, archive/delete, search, and secret-free JSON export
+- Automatic public web research before every chat reply, with current-date context,
+  source links, short-lived caching, bounded page retrieval, and private-network blocking
 - Multi-file and folder context attachments with private local copies, PDF/Office/text
   extraction, SQLite full-text indexing, relevant-chunk retrieval, and per-file removal
 - Local-first Cloud handoff with a progress state, capped Git/chat context, editable preview, and copy
@@ -45,6 +47,11 @@ large user-supplied component is a licensed `.gguf` model.
 - Managed llama.cpp start, stop, health, logs, and OpenAI-compatible chat proxy
 - Loopback-only defaults: app `127.0.0.1:8181`, model `127.0.0.1:8180`
 - Automated WSL/Linux and Windows setup scripts
+
+The model, chat history, attachments, resources, and credentials remain local.
+Automatic web research sends only the current question to a public search provider
+and retrieves public HTTP/HTTPS pages; it never sends attached files, saved
+credentials, configured resources, or earlier conversation messages.
 
 ## Install a release
 

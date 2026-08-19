@@ -72,6 +72,7 @@ from .services.context_index import (
     ingest_streams,
     list_sources as list_context_sources,
 )
+from .services.web_research import research_web
 
 _indexing_slots = asyncio.Semaphore(max(1, min(2, (os.cpu_count() or 2) // 4)))
 
@@ -862,8 +863,16 @@ def prepare_chat(request: ChatRequest) -> tuple[dict, dict]:
             messages.append({"role": "user", "content": f"Approved tool result:\n{message.content}"})
         else:
             messages.append(message.model_dump())
+    latest_query = next((
+        message.content for message in reversed(request.messages)
+        if message.role == "user" and not message.content.startswith("Continue the original task using the approved tool result")
+    ), "")
+    web_research = research_web(latest_query)
+    messages.insert(0, {
+        "role": "system",
+        "content": web_research["context"],
+    })
     if request.conversation_id:
-        latest_query = next((message.content for message in reversed(request.messages) if message.role == "user"), "")
         attached_context = context_for_prompt(request.conversation_id, latest_query)
         if attached_context:
             messages.insert(0, {

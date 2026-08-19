@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ActionList, ActionMenu, Button, Flash, IconButton, PageLayout, Spinner, Textarea, useConfirm } from '@primer/react'
-import { AgentIcon, CloudIcon, CommentDiscussionIcon, DeviceDesktopIcon, GearIcon, HubotIcon, LockIcon, MoonIcon, PaperAirplaneIcon, PersonIcon, SidebarCollapseIcon, SidebarExpandIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
+import { AgentIcon, CloudIcon, CommentDiscussionIcon, DeviceDesktopIcon, GearIcon, GlobeIcon, HubotIcon, LockIcon, MoonIcon, PaperAirplaneIcon, PersonIcon, SidebarCollapseIcon, SidebarExpandIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
 import { api } from './api.js'
 import AttachmentMenu from './AttachmentMenu.jsx'
 import ConversationList from './ConversationList.jsx'
@@ -62,6 +62,7 @@ export default function App({ colorMode, setColorMode }) {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [researching, setResearching] = useState(false)
   const [notice, setNotice] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [conversationsOpen, setConversationsOpen] = useState(false)
@@ -204,9 +205,10 @@ export default function App({ colorMode, setColorMode }) {
     try {
       if (!activeConversation) activeConversation = await ensureConversation()
       const next = [...baseMessages, { role: 'user', content: text }]
-      setMessages([...next, { role: 'assistant', content: '' }]); setInput(''); setGenerating(true); setNotice('')
+      setMessages([...next, { role: 'assistant', content: '' }]); setInput(''); setGenerating(true); setResearching(true); setNotice('')
       const controller = new AbortController(); abortRef.current = controller
       const response = await fetch('/api/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: next, conversation_id: activeConversation }), signal: controller.signal })
+      setResearching(false)
       if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || `Request failed (${response.status})`) }
       const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = ''
       while (true) {
@@ -216,7 +218,7 @@ export default function App({ colorMode, setColorMode }) {
       }
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }; flushTokens()
       await searchConversations('')
-    } catch (error) { setNotice(error.name === 'AbortError' ? 'Generation stopped' : error.message) } finally { if (flushTimer) clearTimeout(flushTimer); flushTokens(); setGenerating(false); abortRef.current = null }
+    } catch (error) { setNotice(error.name === 'AbortError' ? 'Generation stopped' : error.message) } finally { if (flushTimer) clearTimeout(flushTimer); flushTokens(); setGenerating(false); setResearching(false); abortRef.current = null }
   }
   async function send(event) { event?.preventDefault(); const text = input.trim(); if (text) await runMessage(text) }
   async function approveTool() { const pending = pendingTool; if (!pending) return; setBusy(true); try { const data = await api(`/api/mcp-servers/${pending.server_id}/call`, { method: 'POST', body: JSON.stringify({ tool_name: pending.tool_name, arguments: pending.arguments, approved: true, conversation_id: conversationId }) }); const toolMessage = { role: 'tool', content: JSON.stringify(data.result, null, 2), metadata: { server_name: pending.server_name, tool_name: pending.tool_name } }; const history = [...messages.filter(message => message.content), toolMessage]; setMessages(history); setPendingTool(null); setBusy(false); await runMessage('Continue the original task using the approved tool result.', history) } catch (error) { setNotice(error.message); setBusy(false) } }
@@ -240,7 +242,7 @@ export default function App({ colorMode, setColorMode }) {
           {message.role !== 'user' && <div className="message-avatar">{message.role === 'tool' ? <ToolsIcon size={16} /> : <HubotIcon size={17} />}</div>}
           <div className="message-body">{message.role !== 'user' && <div className="message-author"><strong>{message.role === 'tool' ? 'Tool' : 'Local AI'}</strong><span>{message.role === 'assistant' ? 'local model' : 'approved result'}</span></div>}<Suspense fallback={<Spinner size="small" />}><MessageContent message={message} /></Suspense></div>
         </article>)}
-        {generating && !messages.at(-1)?.content && <div className="thinking-row"><Spinner size="small" /> Local AI is thinking…</div>}
+        {generating && !messages.at(-1)?.content && <div className="thinking-row">{researching ? <GlobeIcon size={16} /> : <Spinner size="small" />} {researching ? 'Searching the web for current information…' : 'Local AI is thinking…'}</div>}
       </div></div>
       <div className="composer-dock"><div className="composer-wrap">
         {pendingTool && <div className="tool-approval"><div><strong>Allow {pendingTool.server_name} to run {pendingTool.tool_name}?</strong><code>{JSON.stringify(pendingTool.arguments)}</code></div><div className="tool-approval-actions"><Button size="small" onClick={() => setPendingTool(null)}>Deny</Button><Button size="small" variant="primary" onClick={approveTool}>Allow once</Button></div></div>}
@@ -250,7 +252,7 @@ export default function App({ colorMode, setColorMode }) {
           <Textarea aria-label="Message Local AI" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }} placeholder={runtime.state === 'checking' ? 'Checking local model…' : runtime.healthy ? 'Message Local AI' : 'Connect a local model in Settings'} disabled={!runtime.healthy || busy || generating || indexing} rows={1} />
           {generating ? <IconButton type="button" icon={SquareIcon} variant="danger" onClick={() => abortRef.current?.abort()} aria-label="Stop generating" /> : <IconButton type="submit" icon={PaperAirplaneIcon} variant="primary" disabled={!runtime.healthy || busy || indexing || !input.trim()} aria-label="Send message" />}
         </form>
-        <div className="composer-note"><LockIcon size={12} /> Models, resources, and conversations stay on this computer.</div>
+        <div className="composer-note"><LockIcon size={12} /> Chats stay local. Web research shares only the current question with public search providers.</div>
       </div></div>
       </PageLayout.Content>
     </PageLayout>

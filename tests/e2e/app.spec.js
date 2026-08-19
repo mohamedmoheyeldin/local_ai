@@ -73,6 +73,29 @@ test('files can be attached, indexed, shown, and removed', async ({ page }) => {
   await expect(page.getByText('project-notes.md', { exact: true })).toHaveCount(0)
 })
 
+test('chat shows automatic web research before local generation', async ({ page }) => {
+  await page.route('**/api/runtime', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ state: 'ready', healthy: true, managed: false, endpoint: 'http://127.0.0.1:8180', model: { display_name: 'Test model' } }),
+  }))
+  let releaseResearch
+  const researchGate = new Promise(resolve => { releaseResearch = resolve })
+  await page.route('**/api/chat/stream', async route => {
+    await researchGate
+    await route.fulfill({
+      contentType: 'application/x-ndjson',
+      body: `${JSON.stringify({ type: 'token', content: 'Current answer with a source.' })}\n${JSON.stringify({ type: 'done', usage: {} })}\n`,
+    })
+  })
+  await page.goto('/')
+  await page.getByLabel('Message Local AI').fill('What changed today?')
+  await page.getByRole('button', { name: 'Send message' }).click()
+  await expect(page.getByText('Searching the web for current information…')).toBeVisible()
+  releaseResearch()
+  await expect(page.getByText('Current answer with a source.')).toBeVisible()
+  await expect(page.getByText('Chats stay local. Web research shares only the current question with public search providers.')).toHaveCount(1)
+})
+
 test('light and dark themes are available and persist', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Theme' }).click()
