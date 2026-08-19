@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 
 test('clean chat shell and settings remain usable', async ({ page }) => {
+  await page.route('**/api/runtime', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ state: 'ready', healthy: true, managed: false, endpoint: 'http://127.0.0.1:8180', model: { display_name: 'Test model' } }),
+  }))
   await page.goto('/')
   await expect(page.getByText('How can I help')).toHaveCount(0)
   if (page.viewportSize().width >= 900) {
