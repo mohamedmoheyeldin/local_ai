@@ -25,7 +25,7 @@ export default function AttachmentMenu({ sources, indexing, disabled, onPick, on
       </div>)}
     </div>}
     <ActionMenu>
-      <ActionMenu.Button aria-label="Add files or folders" leadingVisual={PaperclipIcon} disabled={disabled || indexing}><span className="attach-label">{indexing ? 'Indexing…' : 'Add context'}</span></ActionMenu.Button>
+      <ActionMenu.Button variant="invisible" aria-label="Add files or folders" leadingVisual={PaperclipIcon} disabled={disabled || indexing}><span className="attach-label">{indexing ? 'Indexing…' : 'Add context'}</span></ActionMenu.Button>
       <ActionMenu.Overlay align="start"><ActionList>
         <ActionList.Item onSelect={() => filesRef.current?.click()}><ActionList.LeadingVisual><FileIcon /></ActionList.LeadingVisual>Files<ActionList.Description variant="block">Select one or more local files</ActionList.Description></ActionList.Item>
         <ActionList.Item onSelect={() => folderRef.current?.click()}><ActionList.LeadingVisual><FileDirectoryIcon /></ActionList.LeadingVisual>Folder<ActionList.Description variant="block">Index supported files in a folder</ActionList.Description></ActionList.Item>

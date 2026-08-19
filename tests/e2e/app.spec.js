@@ -47,7 +47,13 @@ test('chat sidebar and mobile drawer fit the viewport', async ({ page }) => {
     expect(drawer.x + drawer.width).toBeLessThanOrEqual(viewport.width)
     await dialog.getByRole('button', { name: 'Close' }).click()
   }
-  await expect(page.getByLabel('Message Local AI')).toBeVisible()
+  const composerInput = page.getByLabel('Message Local AI')
+  await expect(composerInput).toBeVisible()
+  await expect.poll(() => composerInput.evaluate(element => {
+    const inputStyle = getComputedStyle(element)
+    const composerStyle = getComputedStyle(element.closest('.composer'))
+    return [inputStyle.borderWidth, inputStyle.boxShadow, composerStyle.borderWidth]
+  })).toEqual(['0px', 'none', '0px'])
 })
 
 test('files can be attached, indexed, shown, and removed', async ({ page }) => {
