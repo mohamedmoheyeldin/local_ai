@@ -107,14 +107,14 @@ jobs:
         shell: pwsh
         run: |
           $installer = Get-ChildItem release\Local-AI-Windows-Setup-*.exe | Select-Object -First 1
-          & $installer.FullName /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
-          if ($LASTEXITCODE -ne 0) { throw "Windows installation failed with exit code $LASTEXITCODE" }
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-') -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Windows installation failed with exit code $($install.ExitCode)" }
           $installDirectory = Join-Path $env:ProgramFiles 'Local AI'
           if (-not (Test-Path (Join-Path $installDirectory 'local-ai.exe'))) { throw 'Application was not installed under Program Files' }
           if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'Local AI\local-ai.db'))) { throw 'Private application data was not initialized under LocalAppData' }
           $uninstaller = Join-Path $installDirectory 'unins000.exe'
-          & $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-          if ($LASTEXITCODE -ne 0) { throw "Windows uninstall failed with exit code $LASTEXITCODE" }
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Windows uninstall failed with exit code $($uninstall.ExitCode)" }
           if (Test-Path $installDirectory) { throw 'Application files remained after uninstall' }
       - name: Create checksum
         shell: pwsh

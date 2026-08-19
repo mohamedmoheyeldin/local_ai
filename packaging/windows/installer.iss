@@ -37,14 +37,8 @@ ChangesEnvironment=no
 Source: "{#BundleDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "install-runtime.ps1"; DestDir: "{app}\installer"; Flags: ignoreversion
 
-[Dirs]
-Name: "{localappdata}\Local AI"
-Name: "{localappdata}\Local AI\Models"
-Name: "{localappdata}\Local AI\runtime\logs"
-
 [Icons]
 Name: "{group}\Local AI"; Filename: "{app}\local-ai.exe"
-Name: "{group}\Local AI models"; Filename: "{localappdata}\Local AI\Models"
 Name: "{autodesktop}\Local AI"; Filename: "{app}\local-ai.exe"
 
 [Run]
@@ -52,7 +46,7 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -N
 Filename: "{app}\local-ai.exe"; Description: "Open Local AI"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -Command ""Unregister-ScheduledTask -TaskPath '\Local AI\' -TaskName 'Start Local AI' -Confirm:$false -ErrorAction SilentlyContinue"""; Flags: runhidden waituntilterminated
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -Command ""Unregister-ScheduledTask -TaskPath '\Local AI\' -TaskName 'Start Local AI' -Confirm:$false -ErrorAction SilentlyContinue"""; Flags: runhidden waituntilterminated; RunOnceId: "RemoveLocalAIStartupTask"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"

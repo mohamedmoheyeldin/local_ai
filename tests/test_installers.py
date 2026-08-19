@@ -6,11 +6,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_windows_installer_is_machine_level() -> None:
     script = (ROOT / "packaging/windows/installer.iss").read_text(encoding="utf-8")
+    runtime_setup = (ROOT / "packaging/windows/install-runtime.ps1").read_text(encoding="utf-8")
     assert "DefaultDirName={autopf}\\Local AI" in script
     assert "PrivilegesRequired=admin" in script
     assert "OutputBaseFilename=Local-AI-Windows-Setup-" in script
     assert "local-ai.exe" in script
-    assert "{localappdata}\\Local AI" in script
+    assert 'Join-Path $env:LOCALAPPDATA "Local AI"' in runtime_setup
 
 
 def test_wsl_installer_uses_standard_system_paths_and_service() -> None:
