@@ -1,8 +1,8 @@
 [Unit]
 Description=Complete Local AI Runtime, Indexing, and Web Stack
 Documentation=file://__PROJECT_DIR__/README.md
-Wants=portable-local-ai.service
-After=portable-local-ai.service
+Wants=local-ai.service
+After=local-ai.service
 
 [Install]
 WantedBy=default.target

@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$AppDirectory,
-    [Parameter(Mandatory = $true)][string]$AppExecutable
+    [Parameter(Mandatory = $true)][string]$AppExecutable,
+    [Parameter(Mandatory = $true)][string]$AppCliExecutable
 )
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$DataDirectory = Join-Path $env:LOCALAPPDATA "PortableLocalAI"
+$DataDirectory = Join-Path $env:LOCALAPPDATA "Local AI"
 $RuntimeDirectory = Join-Path $DataDirectory "runtime"
 $LogPath = Join-Path $DataDirectory "install.log"
 New-Item -ItemType Directory -Path $RuntimeDirectory -Force | Out-Null
@@ -20,14 +21,14 @@ function Save-Asset($Asset, [string]$Destination) {
     if (-not $Asset.digest -or -not ([string]$Asset.digest).StartsWith("sha256:")) {
         throw "GitHub did not provide a SHA-256 digest for $($Asset.name)"
     }
-    Invoke-WebRequest -UseBasicParsing -Headers @{ Accept = "application/vnd.github+json"; "User-Agent" = "Portable-Local-AI-Installer" } -Uri $Asset.browser_download_url -OutFile $Destination
+    Invoke-WebRequest -UseBasicParsing -Headers @{ Accept = "application/vnd.github+json"; "User-Agent" = "Local-AI-Installer" } -Uri $Asset.browser_download_url -OutFile $Destination
     $Actual = (Get-FileHash -Algorithm SHA256 -Path $Destination).Hash.ToLowerInvariant()
     $Expected = ([string]$Asset.digest).Substring(7).ToLowerInvariant()
     if ($Actual -ne $Expected) { throw "Checksum validation failed for $($Asset.name)" }
 }
 
 function Configure-Runtime([string]$Executable) {
-    & $AppExecutable --configure-runtime $Executable | Add-Content -Path $LogPath -Encoding UTF8
+    & $AppCliExecutable --configure-runtime $Executable | Add-Content -Path $LogPath -Encoding UTF8
     if ($LASTEXITCODE -ne 0) { throw "Application initialization failed with exit code $LASTEXITCODE" }
 }
 
@@ -42,7 +43,7 @@ try {
         $GpuNames = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
         $Backend = if ($GpuNames -match "NVIDIA") { "cuda12" } elseif ($GpuNames -match "AMD|Radeon|Intel|Arc") { "vulkan" } else { "cpu" }
         Write-InstallLog "Detected runtime backend: $Backend ($($GpuNames -join ', '))"
-        $Release = Invoke-RestMethod -UseBasicParsing -Headers @{ Accept = "application/vnd.github+json"; "User-Agent" = "Portable-Local-AI-Installer" } -Uri "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest"
+        $Release = Invoke-RestMethod -UseBasicParsing -Headers @{ Accept = "application/vnd.github+json"; "User-Agent" = "Local-AI-Installer" } -Uri "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest"
         $Suffix = switch ($Backend) {
             "cuda12" { "bin-win-cuda-12.4-x64.zip" }
             "vulkan" { "bin-win-vulkan-x64.zip" }
@@ -50,7 +51,7 @@ try {
         }
         $Asset = @($Release.assets | Where-Object { $_.name.EndsWith($Suffix) }) | Select-Object -First 1
         if (-not $Asset) { throw "No official llama.cpp asset matched $Suffix" }
-        $Temporary = Join-Path ([IO.Path]::GetTempPath()) "portable-local-ai-runtime-$([Guid]::NewGuid().ToString('N'))"
+        $Temporary = Join-Path ([IO.Path]::GetTempPath()) "local-ai-runtime-$([Guid]::NewGuid().ToString('N'))"
         New-Item -ItemType Directory -Path $Temporary | Out-Null
         try {
             $Archive = Join-Path $Temporary "runtime.zip"
@@ -85,7 +86,7 @@ try {
     $Trigger.Delay = "PT10S"
     $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -StartWhenAvailable
     $Principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
-    Register-ScheduledTask -TaskPath "\Portable Local AI\" -TaskName "Start Portable Local AI" -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal -Description "Starts Portable Local AI privately at sign-in." -Force | Out-Null
+    Register-ScheduledTask -TaskPath "\Local AI\" -TaskName "Start Local AI" -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal -Description "Starts Local AI privately at sign-in." -Force | Out-Null
     Write-InstallLog "Registered per-user startup task."
 } catch {
     Write-InstallLog "Startup task registration failed: $($_.Exception.Message)"

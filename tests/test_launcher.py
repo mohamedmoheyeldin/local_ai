@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import io
+import os
 import sys
 from pathlib import Path
 
-from backend.app.launcher import _emit_result
+from backend.app.launcher import _configure_installed_paths, _emit_result
 
 
 def test_emit_result_writes_json_when_console_is_available(monkeypatch) -> None:
@@ -33,3 +34,28 @@ def test_crash_report_is_written_without_a_console(monkeypatch, tmp_path: Path) 
 
     report = tmp_path / "runtime" / "logs" / "launcher-error.log"
     assert "RuntimeError: packaged failure" in report.read_text(encoding="utf-8")
+
+
+def test_installed_windows_uses_private_profile_data(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr("backend.app.launcher.platform.system", lambda: "Windows")
+    monkeypatch.setenv("LOCALAPPDATA", "C:/Users/test/AppData/Local")
+    monkeypatch.delenv("LOCAL_AI_DATA_DIR", raising=False)
+    monkeypatch.delenv("LOCAL_AI_MODELS_DIR", raising=False)
+
+    _configure_installed_paths()
+
+    assert Path(os.environ["LOCAL_AI_DATA_DIR"]) == Path("C:/Users/test/AppData/Local/Local AI")
+    assert Path(os.environ["LOCAL_AI_MODELS_DIR"]) == Path("C:/Users/test/AppData/Local/Local AI/Models")
+
+
+def test_installed_linux_uses_system_data_paths(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr("backend.app.launcher.platform.system", lambda: "Linux")
+    monkeypatch.delenv("LOCAL_AI_DATA_DIR", raising=False)
+    monkeypatch.delenv("LOCAL_AI_MODELS_DIR", raising=False)
+
+    _configure_installed_paths()
+
+    assert os.environ["LOCAL_AI_DATA_DIR"] == "/var/lib/local-ai"
+    assert os.environ["LOCAL_AI_MODELS_DIR"] == "/var/lib/local-ai/models"

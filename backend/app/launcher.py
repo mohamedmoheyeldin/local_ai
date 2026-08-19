@@ -20,11 +20,11 @@ def _configure_installed_paths() -> None:
     if not getattr(sys, "frozen", False) and os.environ.get("LOCAL_AI_PACKAGED") != "1":
         return
     if platform.system() == "Windows":
-        data_root = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "PortableLocalAI"
-        models_root = Path.home() / "Documents" / "Portable Local AI" / "Models"
+        data_root = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "Local AI"
+        models_root = data_root / "Models"
     else:
-        data_root = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "portable-local-ai"
-        models_root = Path.home() / "PortableLocalAI" / "models"
+        data_root = Path("/var/lib/local-ai")
+        models_root = data_root / "models"
     os.environ.setdefault("LOCAL_AI_DATA_DIR", str(data_root))
     os.environ.setdefault("LOCAL_AI_MODELS_DIR", str(models_root))
 
@@ -102,7 +102,7 @@ def _initialize(runtime: str = "") -> dict:
 
 def main() -> None:
     _configure_installed_paths()
-    parser = argparse.ArgumentParser(prog="portable-local-ai")
+    parser = argparse.ArgumentParser(prog="local-ai")
     parser.add_argument("--initialize", action="store_true", help="Initialize local data and host recommendations, then exit")
     parser.add_argument("--configure-runtime", default="", metavar="PATH", help="Save a llama.cpp executable and initialize, then exit")
     parser.add_argument("--no-browser", action="store_true", help="Do not open the web UI automatically")

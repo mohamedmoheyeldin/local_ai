@@ -51,7 +51,7 @@ def encrypt(passphrase: str) -> bytes:
 
 def decrypt(payload: bytes, passphrase: str) -> dict[str, Any]:
     if not payload.startswith(MAGIC) or len(payload) < 52:
-        raise ValueError("This is not a Portable Local AI backup")
+        raise ValueError("This is not a Local AI backup")
     salt, nonce, ciphertext = payload[8:24], payload[24:36], payload[36:]
     try:
         plaintext = AESGCM(_key(passphrase, salt)).decrypt(nonce, ciphertext, MAGIC)

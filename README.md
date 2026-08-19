@@ -1,6 +1,6 @@
-# Portable Local AI
+# Local AI
 
-A self-contained local chat application for Windows and WSL. It provides a
+A fully installed local chat application for Windows and WSL. It provides a
 FastAPI backend, a React + Vite interface managed with pnpm, SQLite configuration storage, automatic
 GGUF model discovery, and lifecycle management for the official llama.cpp
 runtime.
@@ -20,7 +20,7 @@ large user-supplied component is a licensed `.gguf` model.
 - FastAPI REST API and built-in API documentation
 - SQLite settings, searchable conversations, and model index under `data/`
 - Local website/service resources with credentials kept in the OS keyring when available,
-  or an encrypted owner-only local vault as the portable fallback
+  or an encrypted owner-only local vault as the headless fallback
 - Streaming chat with stop-generation, archive/delete, search, and secret-free JSON export
 - Multi-file and folder context attachments with private local copies, PDF/Office/text
   extraction, SQLite full-text indexing, relevant-chunk retrieval, and per-file removal
@@ -54,18 +54,20 @@ or copy either installation's database into the other while it is running.
 
 ### Native Windows
 
-Download `Portable-Local-AI-Windows-Setup-X.Y.Z.exe` from the GitHub Releases
-page and follow the modern per-user wizard. It does not require administrator
-access, opens no dependency installers, keeps application data in
-`%LOCALAPPDATA%\PortableLocalAI`, and uses
-`%USERPROFILE%\Documents\Portable Local AI\Models` for models. The installer:
+Download `Local-AI-Windows-Setup-X.Y.Z.exe` from the GitHub Releases page and
+follow the machine-level wizard. Windows requests administrator approval once,
+then installs the application under `C:\Program Files\Local AI` without opening
+separate dependency installers. Each user’s private application data and models
+live under `%LOCALAPPDATA%\Local AI`, where upgrades and uninstall preserve
+them. The installer:
 
 1. installs the compiled application;
 2. reuses an existing `llama-server.exe` when available;
 3. otherwise detects the GPU and quietly downloads the matching current
    official llama.cpp build with its published SHA-256 digest;
 4. falls back to the bundled CPU runtime if optimization is unavailable;
-5. initializes SQLite and registers a limited per-user startup task.
+5. initializes SQLite and registers a limited startup task for the signed-in user;
+6. verifies the completed installation under Program Files in CI.
 
 The wizard remains visible with an installation status while runtime detection
 or download is in progress. A signed release avoids the unknown-publisher
@@ -73,19 +75,20 @@ warning; unsigned development builds can still trigger Windows SmartScreen.
 
 ### WSL
 
-Download `Portable-Local-AI-WSL-Setup-X.Y.Z.run` inside WSL, then run:
+Download `Local-AI-WSL-Setup-X.Y.Z.run` inside WSL, then run:
 
 ```bash
-chmod +x Portable-Local-AI-WSL-Setup-X.Y.Z.run
-./Portable-Local-AI-WSL-Setup-X.Y.Z.run
+chmod +x Local-AI-WSL-Setup-X.Y.Z.run
+./Local-AI-WSL-Setup-X.Y.Z.run
 ```
 
-The single file verifies its embedded payload, installs the compiled
-application and llama.cpp CPU fallback under the user's XDG data directory,
-initializes SQLite, installs a systemd user service when systemd is available,
+The single file verifies its embedded payload and requests `sudo` once. It
+installs the versioned application under `/opt/local-ai`, places the command in
+`/usr/local/bin/local-ai`, stores private mutable data and models under
+`/var/lib/local-ai`, installs and enables `/etc/systemd/system/local-ai.service`,
 and registers a Windows sign-in trigger that wakes the detected WSL
-distribution. It uses a supervised user-process fallback on WSL installations
-without systemd. No system Python, Node.js, pnpm, Git, or GitHub CLI is needed.
+distribution. systemd is required so the backend is always supervised. No
+system Python, Node.js, pnpm, Git, or GitHub CLI is needed.
 
 Place a `.gguf` file in the model folder shown by the app, open **Settings →
 Model & runtime**, scan, select the model, and start it.

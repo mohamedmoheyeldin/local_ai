@@ -1,11 +1,11 @@
-# Releasing Portable Local AI
+# Releasing Local AI
 
 The project produces two independent artifacts:
 
-- `Portable-Local-AI-Windows-Setup-X.Y.Z.exe` — native Windows x64-compatible
-  current-user installer.
-- `Portable-Local-AI-WSL-Setup-X.Y.Z.run` — self-extracting WSL x86-64
-  installer.
+- `Local-AI-Windows-Setup-X.Y.Z.exe` — native Windows x64-compatible system
+  installer targeting `C:\Program Files\Local AI`.
+- `Local-AI-WSL-Setup-X.Y.Z.run` — self-extracting WSL x86-64 system installer
+  targeting `/opt/local-ai` with a systemd system service.
 
 Both contain the compiled frontend/backend, Python runtime and dependencies,
 SQLite support, and an official llama.cpp CPU fallback. Model weights are not
@@ -42,14 +42,14 @@ and stamped into each frozen application during the build.
 
 - Download both artifacts from the draft/release page, not the Actions working
   directories.
-- On a clean Windows VM, verify the signature, install without administrator
-  access, confirm the startup task, scan a model, start/stop llama.cpp, and
-  uninstall while preserving `%LOCALAPPDATA%\PortableLocalAI` and the model
-  folder.
+- On a clean Windows VM, verify the signature and administrator elevation,
+  confirm installation under `C:\Program Files\Local AI`, confirm private data
+  under `%LOCALAPPDATA%\Local AI`, test the startup task, scan a model, start/stop
+  llama.cpp, and uninstall while preserving the ProgramData folder.
 - On a clean supported WSL distribution, verify `SHA256SUMS.txt`, run the `.run`
   file, confirm `/api/health`, restart WSL, confirm automatic startup, and run
-  `./Portable-Local-AI-WSL-Setup-X.Y.Z.run --uninstall`. User data and models
-  must remain.
+  `./Local-AI-WSL-Setup-X.Y.Z.run --uninstall`. `/var/lib/local-ai` data and
+  models must remain.
 - Confirm both light and dark themes, narrow and desktop layouts, file/folder
   indexing, streaming chat, Settings, and Cloud handoff preview/copy.
 

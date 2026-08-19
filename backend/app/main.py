@@ -303,7 +303,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Portable Local AI",
+    title="Local AI",
     version=__version__,
     docs_url="/api/docs",
     redoc_url=None,
@@ -616,7 +616,7 @@ async def finish_mcp_oauth(server_id: int, code: str, state: str) -> HTMLRespons
     saved = server["secrets"]
     saved["oauth_tokens"] = tokens
     vault.set_json(f"mcp:{server_id}", saved)
-    return HTMLResponse("<h1>Connected</h1><p>You can close this window and return to Portable Local AI.</p>")
+    return HTMLResponse("<h1>Connected</h1><p>You can close this window and return to Local AI.</p>")
 
 
 @app.get("/api/mcp/providers")
@@ -679,7 +679,7 @@ def download_backup(request: BackupRequest) -> Response:
         raise HTTPException(400, str(exc)) from exc
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     return Response(payload, media_type="application/octet-stream", headers={
-        "Content-Disposition": f'attachment; filename="portable-local-ai-{stamp}.laibak"',
+        "Content-Disposition": f'attachment; filename="local-ai-{stamp}.laibak"',
         "Cache-Control": "no-store",
     })
 

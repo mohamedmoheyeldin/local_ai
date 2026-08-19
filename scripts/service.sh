@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-APP_UNIT="portable-local-ai.service"
+APP_UNIT="local-ai.service"
 STACK_TARGET="local-ai-stack.target"
 OPTIONAL_UNITS=(llama-server.service embedding-server.service project-indexer.service semantic-index.timer)
 
@@ -41,7 +41,7 @@ install_units() {
   mkdir -p "$USER_UNIT_DIR"
   escaped_project=${PROJECT_DIR//&/\\&}
   sed "s&__PROJECT_DIR__&$escaped_project&g" \
-    "$PROJECT_DIR/deploy/systemd/portable-local-ai.service.in" >"$USER_UNIT_DIR/$APP_UNIT"
+    "$PROJECT_DIR/deploy/systemd/local-ai.service.in" >"$USER_UNIT_DIR/$APP_UNIT"
   sed "s&__PROJECT_DIR__&$escaped_project&g" \
     "$PROJECT_DIR/deploy/systemd/local-ai-stack.target.in" >"$USER_UNIT_DIR/$STACK_TARGET"
   dropin_dir="$USER_UNIT_DIR/$STACK_TARGET.d"
@@ -114,7 +114,7 @@ case "$action" in
     rm -f "$USER_UNIT_DIR/$APP_UNIT" "$USER_UNIT_DIR/$STACK_TARGET"
     rm -rf "$USER_UNIT_DIR/$STACK_TARGET.d"
     systemctl --user daemon-reload
-    echo "Removed Portable Local AI service units. Existing model and indexing services were preserved."
+    echo "Removed Local AI service units. Existing model and indexing services were preserved."
     ;;
   *)
     echo "Usage: $0 {install|start|restart|stop|stop-all|status|logs [lines]|uninstall}"

@@ -1,5 +1,5 @@
 {
-  "name": "portable-local-ai-ui",
+  "name": "local-ai-ui",
   "private": true,
   "version": "1.2.0",
   "packageManager": "pnpm@11.21.0",

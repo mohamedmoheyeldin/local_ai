@@ -17,7 +17,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `${python} -m backend.app.run`,
-    env: { ...process.env, PYTHONPATH: '.', LOCAL_AI_PORT: '8191', LOCAL_AI_DATA_DIR: '/tmp/portable-local-ai-e2e' },
+    env: { ...process.env, PYTHONPATH: '.', LOCAL_AI_PORT: '8191', LOCAL_AI_DATA_DIR: '/tmp/local-ai-e2e' },
     url: 'http://127.0.0.1:8191/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

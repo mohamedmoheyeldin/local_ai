@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$TaskPath = "\Portable Local AI\"
+$TaskPath = "\Local AI\"
 $TaskName = if ($Mode -eq "WSL") { "Start Local AI WSL" } else { "Start Local AI Windows" }
 $ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if ($AppPort -eq 0) { $AppPort = if ($env:LOCAL_AI_PORT) { [int]$env:LOCAL_AI_PORT } else { 8181 } }
@@ -82,7 +82,7 @@ function Show-Status {
         Write-Host "Application: not ready at $HealthUrl"
     }
     if ($Mode -eq "WSL") {
-        & wsl.exe -d $ResolvedDistro --exec systemctl --user --no-pager --plain is-active local-ai-stack.target portable-local-ai.service
+        & wsl.exe -d $ResolvedDistro --exec systemctl --user --no-pager --plain is-active local-ai-stack.target local-ai.service
     }
 }
 
@@ -92,7 +92,7 @@ try {
         "Start" { Start-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName }
         "Restart" {
             if ($Mode -eq "WSL") {
-                & wsl.exe -d $ResolvedDistro --exec systemctl --user restart portable-local-ai.service
+                & wsl.exe -d $ResolvedDistro --exec systemctl --user restart local-ai.service
                 & wsl.exe -d $ResolvedDistro --exec systemctl --user start local-ai-stack.target
             } else {
                 Stop-ScheduledTask -TaskPath $TaskPath -TaskName $TaskName -ErrorAction SilentlyContinue

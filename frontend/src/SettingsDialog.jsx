@@ -85,7 +85,7 @@ export default function SettingsDialog({ open, onClose, models, settings, runtim
   useEffect(() => { setDraft(settings) }, [settings])
   if (!open) return null
   const update = (key, value) => setDraft(current => ({ ...current, [key]: value }))
-  return <Dialog title="Settings" subtitle="Portable Local AI" onClose={onClose} initialFocusRef={initialFocusRef} position={{ narrow: 'fullscreen', regular: 'center' }} width="min(1100px, calc(100vw - 64px))" height="large">
+  return <Dialog title="Settings" subtitle="Local AI" onClose={onClose} initialFocusRef={initialFocusRef} position={{ narrow: 'fullscreen', regular: 'center' }} width="min(1100px, calc(100vw - 64px))" height="large">
     <div className="settings-shell">
       <aside className="settings-navigation"><NavList aria-label="Settings sections"><NavList.Heading visuallyHidden>Settings</NavList.Heading>{tabs.map(([id, label, description, Icon]) => <NavList.Item as="button" key={id} ref={id === 'model' ? initialFocusRef : undefined} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); requestAnimationFrame(() => panelRef.current?.scrollTo({ top: 0 })) }}><NavList.LeadingVisual><Icon /></NavList.LeadingVisual>{label}<NavList.Description>{description}</NavList.Description></NavList.Item>)}</NavList></aside>
       <main className="settings-panel" ref={panelRef}>
