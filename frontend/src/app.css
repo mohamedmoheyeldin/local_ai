@@ -107,6 +107,36 @@ button, input, textarea, select { font: inherit; }
 .catalog-item:hover { border-color: var(--borderColor-accent-emphasis); background: var(--bgColor-accent-muted); }
 .catalog-item strong, .catalog-item span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .catalog-item span { margin-top: 3px; color: var(--fgColor-muted); font-size: 12px; }
+.preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.preset-card { display: flex; min-width: 0; min-height: 168px; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px; border: 1px solid var(--borderColor-default); border-radius: var(--borderRadius-medium); color: var(--fgColor-default); background: var(--bgColor-default); text-align: left; cursor: pointer; }
+.preset-card:hover:not(:disabled) { border-color: var(--borderColor-accent-emphasis); background: var(--bgColor-accent-muted); }
+.preset-card:disabled { cursor: not-allowed; opacity: .65; }
+.preset-card strong { font-size: 15px; }
+.preset-card span { color: var(--fgColor-muted); font-size: 13px; }
+.preset-card small { margin-top: 4px; font-weight: 600; }
+.preset-card .preset-tradeoff { margin-top: 0; color: var(--fgColor-attention); font-weight: 400; }
+.preset-card code { margin-top: auto; color: var(--fgColor-muted); font-size: 11px; }
+.performance-custom-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .75fr); align-items: start; gap: 20px; }
+.performance-controls { display: grid; gap: 12px; }
+.performance-control { padding: 14px; border: 1px solid var(--borderColor-default); border-radius: var(--borderRadius-medium); background: var(--bgColor-default); }
+.performance-control-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.performance-control-heading label { font-weight: 600; }
+.performance-control-heading output { color: var(--fgColor-accent); font-size: 13px; font-weight: 600; }
+.performance-control input[type="range"] { width: 100%; margin: 12px 0 6px; accent-color: var(--fgColor-accent); cursor: pointer; }
+.performance-control input[type="range"]:disabled { cursor: not-allowed; opacity: .6; }
+.performance-control p { margin: 0; color: var(--fgColor-muted); font-size: 12px; line-height: 1.45; }
+.performance-impact { position: sticky; top: 0; padding: 16px; border: 1px solid var(--borderColor-default); border-radius: var(--borderRadius-medium); background: var(--bgColor-muted); }
+.performance-impact h3 { margin: 0; font-size: 15px; }
+.performance-impact > p { margin: 5px 0 16px; color: var(--fgColor-muted); font-size: 12px; }
+.impact-meter + .impact-meter { margin-top: 13px; }
+.impact-meter > div:first-child { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+.impact-track { height: 7px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: var(--bgColor-neutral-muted); }
+.impact-track span { display: block; height: 100%; border-radius: inherit; transition: width 160ms ease; }
+.impact-track .positive { background: var(--bgColor-success-emphasis); }
+.impact-track .attention { background: var(--bgColor-attention-emphasis); }
+.performance-summary { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--borderColor-muted); }
+.performance-summary strong, .performance-summary span { display: block; }
+.performance-summary span { margin-top: 4px; color: var(--fgColor-muted); font-size: 12px; }
 .permission-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; border: 1px solid var(--borderColor-default); border-radius: var(--borderRadius-medium); background: var(--bgColor-muted); }
 .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .metric-card { padding: 14px; border: 1px solid var(--borderColor-default); border-radius: var(--borderRadius-medium); background: var(--bgColor-muted); }
@@ -152,6 +182,8 @@ button, input, textarea, select { font: inherit; }
   .section-heading { flex-direction: column; gap: 12px; }
   .section-heading > .data-card-actions { width: 100%; justify-content: flex-start; }
   .form-grid, .permission-grid, .metric-grid { grid-template-columns: 1fr; }
+  .preset-grid, .performance-custom-grid { grid-template-columns: 1fr; }
+  .performance-impact { position: static; }
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .data-card { flex-direction: column; }
   .data-card > .data-card-actions { width: 100%; justify-content: flex-start; }

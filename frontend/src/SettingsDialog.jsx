@@ -103,7 +103,7 @@ export default function SettingsDialog({ open, onClose, models, settings, runtim
         {tab === 'mcp' && <McpServers servers={mcpServers} providers={providers} onAdd={onAddMcpServer} onEdit={onEditMcpServer} onDuplicate={onDuplicateMcpServer} onDelete={onDeleteMcpServer} onRevoke={onRevokeMcpServer} onToggle={onToggleMcpServer} onTest={onTestMcpServer} onOAuth={onOAuthMcpServer} busy={busy} />}
         {tab === 'workspaces' && <WorkspaceSettings workspaces={workspaces} workspaceRoot={hostProfile?.paths?.home} onAdd={onAddWorkspace} onSelect={onSelectWorkspace} onDelete={onDeleteWorkspace} busy={busy} />}
         {tab === 'activity' && <ActivitySettings events={audit} onRefresh={onRefreshAudit} onClear={onClearAudit} />}
-        {tab === 'performance' && <PerformanceSettings metrics={metrics} runtime={runtime} hostProfile={hostProfile} onRefresh={() => { onRefreshMetrics(); onRefreshHostProfile() }} onApplyRecommended={onApplyHostRecommendations} onPreset={onPreset} busy={busy} />}
+        {tab === 'performance' && <PerformanceSettings metrics={metrics} runtime={runtime} settings={settings} hostProfile={hostProfile} onRefresh={() => { onRefreshMetrics(); onRefreshHostProfile() }} onApplyRecommended={onApplyHostRecommendations} onPreset={onPreset} onSaveCustom={onSave} busy={busy} />}
         {tab === 'data' && <DataSettings onBackup={onBackup} onRestore={onRestore} busy={busy} />}</div>
       </main>
     </div>
