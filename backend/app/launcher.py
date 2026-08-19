@@ -47,6 +47,17 @@ def _healthy(url: str) -> bool:
         return False
 
 
+def _emit_result(result: dict) -> None:
+    """Write CLI output when a console exists.
+
+    PyInstaller's windowed Windows executable intentionally has no stdout.
+    Initialization is also used silently by the installer, so a missing console
+    must not turn a successful initialization into a process failure.
+    """
+    if sys.stdout is not None:
+        sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+
 def _initialize(runtime: str = "") -> dict:
     from backend.app.config import DATA_DIR, MODELS_DIR
     from backend.app.database import get_settings, initialize_database, update_settings
@@ -81,7 +92,7 @@ def main() -> None:
     parser.add_argument("--health-check", action="store_true", help="Exit successfully only when the local application is healthy")
     args = parser.parse_args()
     if args.initialize or args.configure_runtime:
-        print(json.dumps(_initialize(args.configure_runtime), ensure_ascii=False))
+        _emit_result(_initialize(args.configure_runtime))
         return
 
     from backend.app.database import get_settings, initialize_database
