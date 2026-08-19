@@ -42,7 +42,7 @@ def test_health_scan_select_and_settings() -> None:
         assert config.json()["app_url"] == "http://127.0.0.1:8181"
         assert config.json()["configured_model_url"] == "http://127.0.0.1:8180"
         assert config.json()["model_url"].startswith("http://127.0.0.1:")
-        assert config.json()["models_directory"] == str(TEST_ROOT / "models")
+        assert Path(config.json()["models_directory"]).resolve() == (TEST_ROOT / "models").resolve()
         assert Path(config.json()["workspaces_root"]).is_absolute()
 
         profile = client.get("/api/system/profile")

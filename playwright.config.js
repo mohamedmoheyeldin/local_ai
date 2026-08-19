@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import { existsSync } from 'node:fs'
+
+const python = process.env.PYTHON || (existsSync('.venv/bin/python')
+  ? '.venv/bin/python'
+  : existsSync('.venv/Scripts/python.exe') ? '.venv/Scripts/python.exe' : 'python')
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -11,7 +16,8 @@ export default defineConfig({
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'LOCAL_AI_PORT=8191 LOCAL_AI_DATA_DIR=/tmp/portable-local-ai-e2e ./run.sh',
+    command: `${python} -m backend.app.run`,
+    env: { ...process.env, PYTHONPATH: '.', LOCAL_AI_PORT: '8191', LOCAL_AI_DATA_DIR: '/tmp/portable-local-ai-e2e' },
     url: 'http://127.0.0.1:8191/api/health',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

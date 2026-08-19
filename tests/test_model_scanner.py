@@ -36,7 +36,7 @@ def test_llama_command_uses_selected_local_model_without_shell(tmp_path: Path) -
     manager = LlamaManager()
     with patch.object(model_scanner, "MODELS_DIR", tmp_path), patch.object(manager, "find_executable", return_value=(Path("/bin/true"), False)):
         command = manager.command_for(settings)
-    assert command[0] == "/bin/true"
+    assert command[0] == str(Path("/bin/true"))
     assert command[command.index("-m") + 1] == str(model)
     assert ["--host", "127.0.0.1"] == command[command.index("--host"):command.index("--host") + 2]
     assert "--flash-attn" in command
@@ -69,10 +69,12 @@ def test_runtime_discovery_excludes_embedding_only_servers(tmp_path: Path) -> No
     (proc / "102" / "cmdline").write_bytes(b"llama-server\0--port\08080\0")
     original_glob = Path.glob
 
+    proc_root = Path("/proc")
+
     def fake_glob(path, pattern):
-        if str(path) == "/proc":
+        if path == proc_root:
             return original_glob(proc, "[0-9]*/cmdline")
         return original_glob(path, pattern)
 
-    with patch.object(Path, "is_dir", lambda path: True if str(path) == "/proc" else path.exists()), patch.object(Path, "glob", fake_glob):
+    with patch.object(Path, "is_dir", lambda path: True if path == proc_root else path.exists()), patch.object(Path, "glob", fake_glob):
         assert LlamaManager.discover_local_ports() == [8080]
