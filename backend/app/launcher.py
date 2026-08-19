@@ -22,11 +22,15 @@ def _configure_installed_paths() -> None:
     if platform.system() == "Windows":
         data_root = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "Local AI"
         models_root = data_root / "Models"
+        data_directory = str(data_root)
+        models_directory = str(models_root)
     else:
-        data_root = Path("/var/lib/local-ai")
-        models_root = data_root / "models"
-    os.environ.setdefault("LOCAL_AI_DATA_DIR", str(data_root))
-    os.environ.setdefault("LOCAL_AI_MODELS_DIR", str(models_root))
+        # Keep installed Linux paths POSIX-native even when this branch is
+        # exercised by cross-platform packaging tests on a Windows runner.
+        data_directory = "/var/lib/local-ai"
+        models_directory = "/var/lib/local-ai/models"
+    os.environ.setdefault("LOCAL_AI_DATA_DIR", data_directory)
+    os.environ.setdefault("LOCAL_AI_MODELS_DIR", models_directory)
 
 
 def _open_when_ready(url: str) -> None:
