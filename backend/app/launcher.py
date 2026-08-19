@@ -7,6 +7,7 @@ import platform
 import sys
 import threading
 import time
+import traceback
 import urllib.error
 import urllib.request
 import webbrowser
@@ -56,6 +57,22 @@ def _emit_result(result: dict) -> None:
     """
     if sys.stdout is not None:
         sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+
+def _write_crash_report() -> None:
+    """Persist a traceback for windowed builds that have no stderr console."""
+    try:
+        data_root = Path(os.environ.get("LOCAL_AI_DATA_DIR", Path.cwd() / "data"))
+        log_dir = data_root / "runtime" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        report = log_dir / "launcher-error.log"
+        report.write_text(traceback.format_exc(), encoding="utf-8")
+        try:
+            report.chmod(0o600)
+        except OSError:
+            pass
+    except OSError:
+        pass
 
 
 def _initialize(runtime: str = "") -> dict:
@@ -113,4 +130,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        _write_crash_report()
+        raise

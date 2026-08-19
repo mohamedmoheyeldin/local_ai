@@ -63,7 +63,11 @@ jobs:
           $env:LOCAL_AI_DATA_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-data'
           $env:LOCAL_AI_MODELS_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-models'
           & .\dist\portable-local-ai\portable-local-ai.exe --initialize
-          if ($LASTEXITCODE -ne 0) { throw 'Compiled application initialization failed' }
+          if ($LASTEXITCODE -ne 0) {
+            $errorLog = Join-Path $env:LOCAL_AI_DATA_DIR 'runtime\logs\launcher-error.log'
+            if (Test-Path $errorLog) { Get-Content $errorLog }
+            throw 'Compiled application initialization failed'
+          }
           if (-not (Test-Path (Join-Path $env:LOCAL_AI_DATA_DIR 'local-ai.db'))) { throw 'SQLite initialization failed' }
       - name: Sign application executable
         if: env.SIGNING_CERT_BASE64 != ''
