@@ -3,8 +3,20 @@ import { expect, test } from '@playwright/test'
 test('clean chat shell and settings remain usable', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByText('How can I help')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible()
-  await page.getByRole('button', { name: 'Settings' }).click()
+  if (page.viewportSize().width >= 900) {
+    await expect(page.locator('.app-brand-mark svg')).toBeVisible()
+  }
+  await expect(page.getByRole('button', { name: 'Open prompt picker' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open model settings' })).toBeVisible()
+  const composer = await page.locator('.composer').boundingBox()
+  const viewportCenter = page.viewportSize().height / 2
+  expect(Math.abs((composer.y + composer.height / 2) - viewportCenter)).toBeLessThan(170)
+  await page.getByLabel('Message Local AI').fill('/')
+  await expect(page.getByRole('listbox', { name: 'Commands' })).toBeVisible()
+  await expect(page.getByText('/review', { exact: true })).toBeVisible()
+  await page.getByLabel('Message Local AI').fill('')
+  await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible()
   const dialog = page.getByRole('dialog', { name: 'Settings' })
   await expect(dialog.getByRole('tab', { name: /Model & runtime/ })).toBeVisible()
@@ -13,6 +25,12 @@ test('clean chat shell and settings remain usable', async ({ page }) => {
     const box = await dialog.boundingBox()
     return Boolean(box && box.width >= viewport.width - 2 && box.height >= viewport.height - 2)
   }).toBe(true)
+  if (viewport.width >= 768) {
+    const firstTab = await dialog.getByRole('tab', { name: /Model & runtime/ }).boundingBox()
+    const secondTab = await dialog.getByRole('tab', { name: /Local resources/ }).boundingBox()
+    expect(Math.abs(firstTab.x - secondTab.x)).toBeLessThan(2)
+    expect(secondTab.y).toBeGreaterThan(firstTab.y)
+  }
   await dialog.getByRole('tab', { name: /MCP servers/ }).click()
   await expect(page.getByRole('button', { name: 'New MCP server' })).toBeVisible()
   await expect(page.getByText('Local, permission-controlled connections')).toBeVisible()
@@ -93,6 +111,8 @@ test('chat shows automatic web research before local generation', async ({ page 
   await expect(page.getByText('Searching the web for current information…')).toBeVisible()
   releaseResearch()
   await expect(page.getByText('Current answer with a source.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
   await expect(page.getByText('Chats stay local. Web research shares only the current question with public search providers.')).toHaveCount(1)
 })
 
@@ -139,7 +159,7 @@ test('light and dark themes are available and persist', async ({ page }) => {
 
 test('advanced local settings are accessible and responsive', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Settings' })
   await dialog.getByRole('tab', { name: /Workspaces/ }).click()
   await expect(dialog.getByRole('heading', { name: 'Approved workspaces' })).toBeVisible()

@@ -27,6 +27,8 @@ large user-supplied component is a licensed `.gguf` model.
 - Model-initiated local workspace tools for listing and reading files, creating folders,
   writing or editing files, moving or deleting paths, and running shell commands; every
   action requires explicit one-time approval and file operations stay inside the selected workspace
+- A single user-facing interface: managed llama.cpp processes run API-only with their bundled
+  Web UI disabled, while the React application provides chat, model status, tools, and settings
 - Multi-file and folder context attachments with private local copies, PDF/Office/text
   extraction, SQLite full-text indexing, relevant-chunk retrieval, and per-file removal
 - Local-first Cloud handoff with a progress state, capped Git/chat context, editable preview, and copy

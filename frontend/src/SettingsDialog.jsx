@@ -87,9 +87,9 @@ export default function SettingsDialog({ open, onClose, models, settings, runtim
   const update = (key, value) => setDraft(current => ({ ...current, [key]: value }))
   const selectTab = id => { setTab(id); requestAnimationFrame(() => panelRef.current?.scrollTo({ top: 0 })) }
   const onTabKeyDown = (event, index) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
-    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + tabs.length) % tabs.length
     selectTab(tabs[nextIndex][0])
     requestAnimationFrame(() => document.getElementById(`settings-tab-${tabs[nextIndex][0]}`)?.focus())
   }

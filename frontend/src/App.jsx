@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ActionList, ActionMenu, Button, Flash, IconButton, PageLayout, Spinner, Textarea, useConfirm } from '@primer/react'
-import { AgentIcon, CloudIcon, CommentDiscussionIcon, DeviceDesktopIcon, GearIcon, GlobeIcon, HubotIcon, LockIcon, MoonIcon, PaperAirplaneIcon, PersonIcon, SidebarCollapseIcon, SidebarExpandIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
+import { CloudIcon, CommandPaletteIcon, CommentDiscussionIcon, CpuIcon, DeviceDesktopIcon, GearIcon, GlobeIcon, LockIcon, MoonIcon, PaperAirplaneIcon, SidebarCollapseIcon, SidebarExpandIcon, SparkleFillIcon, SquareIcon, SunIcon, ToolsIcon } from '@primer/octicons-react'
 import { api } from './api.js'
 import AttachmentMenu from './AttachmentMenu.jsx'
+import BrandMark from './BrandMark.jsx'
 import ConversationList from './ConversationList.jsx'
 
 const MessageContent = lazy(() => import('./MessageContent.jsx'))
@@ -16,7 +17,7 @@ function ThemeMenu({ colorMode, setColorMode }) {
   return <ActionMenu><ActionMenu.Button aria-label="Theme" leadingVisual={ActiveIcon}><span className="header-button-label">Theme</span></ActionMenu.Button><ActionMenu.Overlay align="end"><ActionList selectionVariant="single">{choices.map(([id, label, Icon]) => <ActionList.Item key={id} selected={colorMode === id} onSelect={() => setColorMode(id)}><ActionList.LeadingVisual><Icon /></ActionList.LeadingVisual>{label}</ActionList.Item>)}</ActionList></ActionMenu.Overlay></ActionMenu>
 }
 
-function AppHeader({ runtime, messages, title, sidebarCollapsed, colorMode, setColorMode, onShowSidebar, onMobileChats, onHandoff, onSettings }) {
+function AppHeader({ messages, title, sidebarCollapsed, colorMode, setColorMode, onShowSidebar, onMobileChats, onHandoff, onSettings }) {
   return <div className="app-header">
     <div className="chat-title-group">
       <IconButton className="desktop-sidebar-open" icon={SidebarExpandIcon} aria-label="Show chat sidebar" aria-controls="chat-sidebar" aria-expanded={!sidebarCollapsed} onClick={onShowSidebar} />
@@ -24,7 +25,6 @@ function AppHeader({ runtime, messages, title, sidebarCollapsed, colorMode, setC
       <div className="chat-title"><strong>{title}</strong><span>Local AI</span></div>
     </div>
     <div className="header-actions">
-      <div className="runtime-pill"><span className={`status-indicator ${runtime.state}`}></span><span>{runtime.state === 'checking' ? 'Checking local model…' : runtime.healthy ? runtime.model?.display_name || 'Local model ready' : 'Model unavailable'}</span></div>
       <Button aria-label="Cloud handoff" leadingVisual={CloudIcon} onClick={onHandoff} disabled={!messages.length}><span className="header-button-label">Cloud handoff</span></Button>
       <ThemeMenu colorMode={colorMode} setColorMode={setColorMode} />
       <IconButton icon={GearIcon} aria-label="Settings" onClick={onSettings} />
@@ -35,13 +35,32 @@ function AppHeader({ runtime, messages, title, sidebarCollapsed, colorMode, setC
 function AppSidebar({ conversations, currentId, onSelect, onNew, onArchive, onDelete, onSearch, onCollapse }) {
   return <aside className="sidebar-shell" aria-label="Chat history">
     <div className="sidebar-header">
-      <div className="app-brand"><span className="app-brand-mark"><AgentIcon size={20} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Your private AI workspace</span></div></div>
+      <div className="app-brand"><span className="app-brand-mark"><BrandMark size={23} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Your private AI workspace</span></div></div>
       <IconButton icon={SidebarCollapseIcon} variant="invisible" aria-label="Hide chat sidebar" aria-controls="chat-sidebar" aria-expanded="true" onClick={onCollapse} />
     </div>
     <ConversationList compact conversations={conversations} currentId={currentId} onSelect={onSelect} onNew={onNew} onArchive={onArchive} onDelete={onDelete} onSearch={onSearch} />
     <div className="sidebar-privacy"><LockIcon size={12} /><span>Chats stay on this computer</span></div>
   </aside>
 }
+
+function PromptMenu({ disabled, onChoose }) {
+  const prompts = [
+    ['Review workspace', 'Review the selected workspace, identify the most important improvements, and explain what you recommend.'],
+    ['Plan a change', 'Create a concise implementation plan for this task, including validation and likely risks: '],
+    ['Explain code', 'Explain the relevant code clearly, including how the main pieces interact: '],
+    ['Find a problem', 'Inspect the selected workspace for the likely cause of this problem and propose a verified fix: '],
+  ]
+  return <ActionMenu><ActionMenu.Button variant="invisible" aria-label="Open prompt picker" leadingVisual={SparkleFillIcon} disabled={disabled}><span className="composer-tool-label">Prompts</span></ActionMenu.Button><ActionMenu.Overlay align="start"><ActionList>{prompts.map(([label, prompt]) => <ActionList.Item key={label} onSelect={() => onChoose(prompt)}>{label}<ActionList.Description variant="block">{prompt}</ActionList.Description></ActionList.Item>)}</ActionList></ActionMenu.Overlay></ActionMenu>
+}
+
+const QUICK_COMMANDS = [
+  ['/new', 'Start a new chat'],
+  ['/files', 'List the selected workspace files'],
+  ['/review', 'Review the selected workspace'],
+  ['/status', 'Inspect local model and project status'],
+  ['/handoff', 'Open Cloud handoff'],
+  ['/settings', 'Open application settings'],
+]
 
 export default function App({ colorMode, setColorMode }) {
   const [models, setModels] = useState([])
@@ -72,9 +91,18 @@ export default function App({ colorMode, setColorMode }) {
   const scrollRef = useRef(null)
   const followLatestRef = useRef(true)
   const abortRef = useRef(null)
+  const inputRef = useRef(null)
   const confirm = useConfirm()
 
   useEffect(() => { localStorage.setItem('local-ai-sidebar-collapsed', String(sidebarCollapsed)) }, [sidebarCollapsed])
+  useEffect(() => {
+    const shortcuts = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); inputRef.current?.focus() }
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'o') { event.preventDefault(); newConversation(); inputRef.current?.focus() }
+    }
+    window.addEventListener('keydown', shortcuts)
+    return () => window.removeEventListener('keydown', shortcuts)
+  })
 
   const load = useCallback(async () => {
     const results = await Promise.allSettled([
@@ -220,7 +248,17 @@ export default function App({ colorMode, setColorMode }) {
       await searchConversations('')
     } catch (error) { setNotice(error.name === 'AbortError' ? 'Generation stopped' : error.message) } finally { if (flushTimer) clearTimeout(flushTimer); flushTokens(); setGenerating(false); setResearching(false); abortRef.current = null }
   }
-  async function send(event) { event?.preventDefault(); const text = input.trim(); if (text) await runMessage(text) }
+  function applyQuickCommand(command) {
+    if (command === '/new') { newConversation(); setInput('') }
+    else if (command === '/handoff') { setHandoffOpen(true); setInput('') }
+    else if (command === '/settings') { setSettingsOpen(true); setInput('') }
+    else if (command === '/files') setInput('Use local tools to list the selected workspace files and summarize the project structure.')
+    else if (command === '/review') setInput('Review the selected workspace and recommend the most important verified improvements.')
+    else if (command === '/status') setInput('Inspect the selected workspace and local runtime status, then report any problems and recommended actions.')
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+  async function send(event) { event?.preventDefault(); const text = input.trim(); if (QUICK_COMMANDS.some(([command]) => command === text)) { applyQuickCommand(text); return } if (text) await runMessage(text) }
+  function retryLastResponse() { const assistantIndex = messages.findLastIndex(message => message.role === 'assistant'); const userIndex = messages.slice(0, assistantIndex).findLastIndex(message => message.role === 'user'); if (userIndex >= 0) runMessage(messages[userIndex].content, messages.slice(0, userIndex)) }
   async function approveTool() { const pending = pendingTool; if (!pending) return; setBusy(true); try { const endpoint = pending.local ? '/api/local-tools/call' : `/api/mcp-servers/${pending.server_id}/call`; const data = await api(endpoint, { method: 'POST', body: JSON.stringify({ tool_name: pending.tool_name, arguments: pending.arguments, approved: true, conversation_id: conversationId }) }); const toolMessage = { role: 'tool', content: JSON.stringify(data.result, null, 2), metadata: { server_name: pending.server_name, tool_name: pending.tool_name } }; const history = [...messages.filter(message => message.content), toolMessage]; setMessages(history); setPendingTool(null); await refreshAudit(); setBusy(false); await runMessage('Continue the original task using the approved tool result.', history) } catch (error) { setNotice(error.message); setBusy(false) } }
 
   const currentTitle = conversations.find(item => item.id === conversationId)?.title || 'New chat'
@@ -231,25 +269,29 @@ export default function App({ colorMode, setColorMode }) {
         <AppSidebar conversations={conversations} currentId={conversationId} onSelect={selectConversation} onNew={newConversation} onArchive={archiveConversation} onDelete={removeConversation} onSearch={searchConversations} onCollapse={() => setSidebarCollapsed(true)} />
       </PageLayout.Sidebar>
       <PageLayout.Header className="main-header-shell" padding="none" divider="line">
-        <AppHeader runtime={runtime} messages={messages} title={currentTitle} sidebarCollapsed={sidebarCollapsed} colorMode={colorMode} setColorMode={setColorMode} onShowSidebar={() => setSidebarCollapsed(false)} onMobileChats={() => setConversationsOpen(true)} onHandoff={() => setHandoffOpen(true)} onSettings={() => setSettingsOpen(true)} />
+        <AppHeader messages={messages} title={currentTitle} sidebarCollapsed={sidebarCollapsed} colorMode={colorMode} setColorMode={setColorMode} onShowSidebar={() => setSidebarCollapsed(false)} onMobileChats={() => setConversationsOpen(true)} onHandoff={() => setHandoffOpen(true)} onSettings={() => setSettingsOpen(true)} />
       </PageLayout.Header>
-      <PageLayout.Content className="chat-main" width="full" padding="none">
+      <PageLayout.Content className={`chat-main${messages.length ? '' : ' empty'}`} width="full" padding="none">
       <div className="message-scroll" ref={scrollRef} onScroll={event => {
         const viewport = event.currentTarget
         followLatestRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120
       }}><div className="message-list" aria-live="polite">
         {messages.map((message, index) => <article key={`${message.role}-${index}`} className={`message-row ${message.role}`}>
-          {message.role !== 'user' && <div className="message-avatar">{message.role === 'tool' ? <ToolsIcon size={16} /> : <HubotIcon size={17} />}</div>}
-          <div className="message-body">{message.role !== 'user' && <div className="message-author"><strong>{message.role === 'tool' ? 'Tool' : 'Local AI'}</strong><span>{message.role === 'assistant' ? 'local model' : 'approved result'}</span></div>}<Suspense fallback={<Spinner size="small" />}><MessageContent message={message} /></Suspense></div>
+          {message.role !== 'user' && <div className="message-avatar">{message.role === 'tool' ? <ToolsIcon size={16} /> : <BrandMark size={18} />}</div>}
+          <div className="message-body">{message.role !== 'user' && <div className="message-author"><strong>{message.role === 'tool' ? 'Tool' : 'Local AI'}</strong><span>{message.role === 'assistant' ? runtime.model?.display_name || 'local model' : 'approved result'}</span></div>}<Suspense fallback={<Spinner size="small" />}><MessageContent message={message} canRetry={message.role === 'assistant' && index === messages.length - 1 && !generating} onRetry={retryLastResponse} /></Suspense></div>
         </article>)}
         {generating && !messages.at(-1)?.content && <div className="thinking-row">{researching ? <GlobeIcon size={16} /> : <Spinner size="small" />} {researching ? 'Searching the web for current information…' : 'Local AI is thinking…'}</div>}
       </div></div>
       <div className="composer-dock"><div className="composer-wrap">
         {pendingTool && <div className="tool-approval"><div><strong>Allow {pendingTool.server_name} to run {pendingTool.tool_name}?</strong><span>{pendingTool.local ? 'This can change files or run a command on this computer.' : 'Review the requested action before continuing.'}</span><code>{JSON.stringify(pendingTool.arguments, null, 2)}</code></div><div className="tool-approval-actions"><Button size="small" onClick={() => setPendingTool(null)}>Deny</Button><Button size="small" variant="primary" onClick={approveTool}>Allow once</Button></div></div>}
         {notice && <Flash className="composer-alert" role="status">{notice}</Flash>}
+        {input.startsWith('/') && <div className="command-picker" role="listbox" aria-label="Commands">{QUICK_COMMANDS.filter(([command]) => command.startsWith(input.toLowerCase())).map(([command, description]) => <button type="button" key={command} onClick={() => applyQuickCommand(command)}><CommandPaletteIcon size={15} /><span><strong>{command}</strong><small>{description}</small></span></button>)}</div>}
         <form className="composer" onSubmit={send}>
+          <Textarea ref={inputRef} aria-label="Message Local AI" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }} placeholder={runtime.state === 'checking' ? 'Checking local model…' : runtime.healthy ? 'Message Local AI or type / for commands' : 'Connect a local model in Settings'} disabled={!runtime.healthy || busy || generating || indexing} rows={2} />
           <AttachmentMenu sources={contextSources} indexing={indexing} disabled={busy || generating} onPick={attachContext} onRemove={removeContext} />
-          <Textarea aria-label="Message Local AI" value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); send() } }} placeholder={runtime.state === 'checking' ? 'Checking local model…' : runtime.healthy ? 'Message Local AI' : 'Connect a local model in Settings'} disabled={!runtime.healthy || busy || generating || indexing} rows={1} />
+          <PromptMenu disabled={busy || generating} onChoose={prompt => { setInput(prompt); requestAnimationFrame(() => inputRef.current?.focus()) }} />
+          <span className="composer-spacer" />
+          <Button type="button" className="model-chip" variant="invisible" leadingVisual={CpuIcon} onClick={() => setSettingsOpen(true)} aria-label="Open model settings"><span className={`status-indicator ${runtime.state}`}></span><span>{runtime.state === 'checking' ? 'Checking model' : runtime.healthy ? runtime.model?.display_name || 'Local model' : 'Model unavailable'}</span></Button>
           {generating ? <IconButton type="button" icon={SquareIcon} variant="danger" onClick={() => abortRef.current?.abort()} aria-label="Stop generating" /> : <IconButton type="submit" icon={PaperAirplaneIcon} variant="primary" disabled={!runtime.healthy || busy || indexing || !input.trim()} aria-label="Send message" />}
         </form>
         <div className="composer-note"><LockIcon size={12} /> Chats stay local. Web research shares only the current question with public search providers.</div>
