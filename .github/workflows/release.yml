@@ -39,5 +39,6 @@ jobs:
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release create "$GITHUB_REF_NAME" release-assets/Portable-Local-AI-Windows-Setup-*.exe release-assets/Portable-Local-AI-WSL-Setup-*.run release-assets/SHA256SUMS.txt --verify-tag --generate-notes --title "Portable Local AI ${GITHUB_REF_NAME#v}"
