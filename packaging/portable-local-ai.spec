@@ -44,8 +44,21 @@ exe = EXE(
     disable_windowed_traceback=False,
     upx=False,
 )
+executables = [exe]
+if platform.system() == "Windows":
+    cli = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name="portable-local-ai-cli",
+        console=True,
+        disable_windowed_traceback=False,
+        upx=False,
+    )
+    executables.append(cli)
 coll = COLLECT(
-    exe,
+    *executables,
     a.binaries,
     a.datas,
     strip=False,

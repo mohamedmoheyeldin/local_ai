@@ -62,7 +62,7 @@ jobs:
         run: |
           $env:LOCAL_AI_DATA_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-data'
           $env:LOCAL_AI_MODELS_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-models'
-          & .\dist\portable-local-ai\portable-local-ai.exe --initialize
+          & .\dist\portable-local-ai\portable-local-ai-cli.exe --initialize
           if ($LASTEXITCODE -ne 0) {
             $errorLog = Join-Path $env:LOCAL_AI_DATA_DIR 'runtime\logs\launcher-error.log'
             if (Test-Path $errorLog) { Get-Content $errorLog }
