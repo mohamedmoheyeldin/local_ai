@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+expected="__PAYLOAD_SHA256__"
+line=$(awk '/^__PORTABLE_LOCAL_AI_ARCHIVE__$/ {print NR + 1; exit}' "$0")
+if [[ -z "$line" ]]; then printf 'Installer payload marker is missing.\n' >&2; exit 10; fi
+temporary=$(mktemp -d "${TMPDIR:-/tmp}/portable-local-ai-installer.XXXXXX")
+trap 'rm -rf -- "$temporary"' EXIT
+tail -n +"$line" "$0" >"$temporary/payload.tar.gz"
+actual=$(sha256sum "$temporary/payload.tar.gz" | awk '{print $1}')
+if [[ "$actual" != "$expected" ]]; then printf 'Installer checksum verification failed.\n' >&2; exit 11; fi
+mkdir "$temporary/payload"
+tar -xzf "$temporary/payload.tar.gz" -C "$temporary/payload" --no-same-owner --no-same-permissions
+export PORTABLE_LOCAL_AI_PAYLOAD="$temporary/payload"
+exec bash "$temporary/payload/install.sh" "$@"
+__PORTABLE_LOCAL_AI_ARCHIVE__

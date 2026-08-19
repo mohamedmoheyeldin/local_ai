@@ -1,0 +1,43 @@
+name: Publish installers
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    uses: ./.github/workflows/build-windows.yml
+    secrets: inherit
+    with:
+      version: ${{ github.ref_name }}
+
+  wsl:
+    uses: ./.github/workflows/build-wsl.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  release:
+    needs: [windows, wsl]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: '*-installer'
+          path: release-assets
+          merge-multiple: true
+      - name: Verify and combine checksums
+        working-directory: release-assets
+        run: |
+          sha256sum --check *.sha256
+          sha256sum Portable-Local-AI-Windows-Setup-*.exe Portable-Local-AI-WSL-Setup-*.run > SHA256SUMS.txt
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/Portable-Local-AI-Windows-Setup-*.exe release-assets/Portable-Local-AI-WSL-Setup-*.run release-assets/SHA256SUMS.txt --verify-tag --generate-notes --title "Portable Local AI ${GITHUB_REF_NAME#v}"

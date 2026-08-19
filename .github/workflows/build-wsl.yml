@@ -1,0 +1,72 @@
+name: Build WSL installer
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version embedded in the installer
+        required: true
+        default: 0.0.0-dev
+
+permissions:
+  contents: read
+
+jobs:
+  build-wsl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            packaging/requirements.txt
+      - uses: pnpm/setup@v2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Resolve version
+        shell: bash
+        run: |
+          version='${{ inputs.version }}'
+          version=${version#v}
+          [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]] || { echo "Invalid version: $version" >&2; exit 2; }
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+      - run: python packaging/stamp_version.py "${{ inputs.version }}"
+      - run: python -m pip install -r backend/requirements.txt -r packaging/requirements.txt
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Bundle verified llama.cpp CPU fallback
+        run: python packaging/fetch_llama_runtime.py --system linux --architecture x64 --backend cpu --output packaging/runtime
+      - name: Compile self-contained application
+        run: pyinstaller --noconfirm --clean packaging/portable-local-ai.spec
+      - name: Smoke-test compiled application
+        run: |
+          export LOCAL_AI_DATA_DIR="$RUNNER_TEMP/portable-local-ai-data"
+          export LOCAL_AI_MODELS_DIR="$RUNNER_TEMP/portable-local-ai-models"
+          dist/portable-local-ai/portable-local-ai --initialize
+          test -s "$LOCAL_AI_DATA_DIR/local-ai.db"
+          test -x dist/portable-local-ai/_internal/runtime/llama-server
+      - name: Build and exercise the single-file WSL installer
+        run: |
+          python packaging/build_wsl_installer.py --bundle dist/portable-local-ai --version "$RELEASE_VERSION" --output "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run"
+          test_home="$RUNNER_TEMP/wsl-installer-home"
+          mkdir -p "$test_home"
+          HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run"
+          HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run" --uninstall
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wsl-installer
+          path: |
+            release/Portable-Local-AI-WSL-Setup-*.run
+            release/Portable-Local-AI-WSL-Setup-*.run.sha256
+          if-no-files-found: error
+          retention-days: 14

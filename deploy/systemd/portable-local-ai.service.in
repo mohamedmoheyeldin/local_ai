@@ -1,0 +1,26 @@
+[Unit]
+Description=Portable Local AI React and FastAPI Application
+Documentation=file://__PROJECT_DIR__/README.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=__PROJECT_DIR__
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=/usr/bin/test -x __PROJECT_DIR__/.venv/bin/python
+ExecStartPre=/usr/bin/test -r __PROJECT_DIR__/frontend/dist/index.html
+ExecStart=__PROJECT_DIR__/run.sh
+Restart=on-failure
+RestartSec=4
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillSignal=SIGINT
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=portable-local-ai
+
+[Install]
+WantedBy=default.target

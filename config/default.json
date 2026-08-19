@@ -1,0 +1,18 @@
+{
+  "app_host": "127.0.0.1",
+  "app_port": 8181,
+  "model_host": "127.0.0.1",
+  "model_port": 8180,
+  "selected_model": "",
+  "llama_executable": "",
+  "context_size": 8192,
+  "gpu_layers": 0,
+  "threads": 0,
+  "parallel": 1,
+  "cache_ram_mb": 256,
+  "flash_attention": true,
+  "auto_start": false,
+  "auto_tune": true,
+  "hardware_fingerprint": "",
+  "tuning_version": 0
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Portable Local AI
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=__EXECUTABLE__ --no-browser
+Restart=on-failure
+RestartSec=4
+TimeoutStopSec=30
+KillSignal=SIGINT
+UMask=0077
+
+[Install]
+WantedBy=default.target
