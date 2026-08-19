@@ -28,8 +28,8 @@ jobs:
       SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
       SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
           cache: pip
@@ -37,7 +37,7 @@ jobs:
             backend/requirements.txt
             packaging/requirements.txt
       - uses: pnpm/setup@v2
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -105,7 +105,7 @@ jobs:
           $file = Get-ChildItem release\Portable-Local-AI-Windows-Setup-*.exe | Select-Object -First 1
           $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
           "$hash  $($file.Name)" | Set-Content -Encoding ascii "$($file.FullName).sha256"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: |

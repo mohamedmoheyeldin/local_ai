@@ -20,8 +20,8 @@ jobs:
   build-wsl:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
           cache: pip
@@ -29,7 +29,7 @@ jobs:
             backend/requirements.txt
             packaging/requirements.txt
       - uses: pnpm/setup@v2
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -62,7 +62,7 @@ jobs:
           mkdir -p "$test_home"
           HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run"
           HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run" --uninstall
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wsl-installer
           path: |
