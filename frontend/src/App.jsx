@@ -35,7 +35,7 @@ function AppHeader({ runtime, messages, title, sidebarCollapsed, colorMode, setC
 function AppSidebar({ conversations, currentId, onSelect, onNew, onArchive, onDelete, onSearch, onCollapse }) {
   return <aside className="sidebar-shell" aria-label="Chat history">
     <div className="sidebar-header">
-      <div className="app-brand"><span className="app-brand-mark"><AgentIcon size={20} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Private workspace</span></div></div>
+      <div className="app-brand"><span className="app-brand-mark"><AgentIcon size={20} /></span><div className="app-brand-copy"><strong>Local AI</strong><span>Your private AI workspace</span></div></div>
       <IconButton icon={SidebarCollapseIcon} variant="invisible" aria-label="Hide chat sidebar" aria-controls="chat-sidebar" aria-expanded="true" onClick={onCollapse} />
     </div>
     <ConversationList compact conversations={conversations} currentId={currentId} onSelect={onSelect} onNew={onNew} onArchive={onArchive} onDelete={onDelete} onSearch={onSearch} />
