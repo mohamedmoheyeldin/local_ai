@@ -133,6 +133,8 @@ class ResourceUpdate(BaseModel):
 
 class McpServerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+    provider_id: str = Field(default="", max_length=80)
+    account_label: str = Field(default="", max_length=320)
     category: str = Field(default="custom", max_length=80)
     description: str = Field(default="", max_length=1_000)
     enabled: bool = False
@@ -180,6 +182,8 @@ class McpToolCall(BaseModel):
 
 class McpServerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
+    provider_id: str | None = Field(default=None, max_length=80)
+    account_label: str | None = Field(default=None, max_length=320)
     category: str | None = Field(default=None, max_length=80)
     description: str | None = Field(default=None, max_length=1_000)
     enabled: bool | None = None
@@ -465,7 +469,7 @@ def mcp_servers() -> dict:
 @app.post("/api/mcp-servers", status_code=201)
 def add_mcp_server(server: McpServerCreate) -> dict:
     values = server.model_dump()
-    for key in ("name", "category", "description", "endpoint", "command", "arguments", "working_directory"):
+    for key in ("name", "provider_id", "account_label", "category", "description", "endpoint", "command", "arguments", "working_directory"):
         values[key] = values[key].strip()
     values["public_config"] = {key.strip(): value.strip() for key, value in values["public_config"].items() if key.strip()}
     values["secrets"] = {key.strip(): value for key, value in values["secrets"].items() if key.strip() and value}

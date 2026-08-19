@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Checkbox, Dialog, Flash, FormControl, IconButton, LinkButton, NavList, Select, TextInput, Textarea } from '@primer/react'
+import { Button, Checkbox, Dialog, Flash, FormControl, IconButton, LinkButton, Select, TextInput, Textarea } from '@primer/react'
 import { ArchiveIcon, DatabaseIcon, DownloadIcon, GearIcon, KeyIcon, PackageIcon, PersonIcon, PulseIcon, RepoIcon, ServerIcon, ShieldLockIcon, SyncIcon } from '@primer/octicons-react'
 import McpServers from './McpServers.jsx'
 import { ActivitySettings, DataSettings, PerformanceSettings, WorkspaceSettings } from './AdvancedSettings.jsx'
@@ -85,18 +85,26 @@ export default function SettingsDialog({ open, onClose, models, settings, runtim
   useEffect(() => { setDraft(settings) }, [settings])
   if (!open) return null
   const update = (key, value) => setDraft(current => ({ ...current, [key]: value }))
-  return <Dialog title="Settings" subtitle="Local AI" onClose={onClose} initialFocusRef={initialFocusRef} position={{ narrow: 'fullscreen', regular: 'center' }} width="min(1100px, calc(100vw - 64px))" height="large">
+  const selectTab = id => { setTab(id); requestAnimationFrame(() => panelRef.current?.scrollTo({ top: 0 })) }
+  const onTabKeyDown = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+    selectTab(tabs[nextIndex][0])
+    requestAnimationFrame(() => document.getElementById(`settings-tab-${tabs[nextIndex][0]}`)?.focus())
+  }
+  return <Dialog className="settings-dialog" title="Settings" subtitle="Local AI" onClose={onClose} initialFocusRef={initialFocusRef} position={{ narrow: 'fullscreen', regular: 'fullscreen' }} width="100vw" height="100vh">
     <div className="settings-shell">
-      <aside className="settings-navigation"><NavList aria-label="Settings sections"><NavList.Heading visuallyHidden>Settings</NavList.Heading>{tabs.map(([id, label, description, Icon]) => <NavList.Item as="button" key={id} ref={id === 'model' ? initialFocusRef : undefined} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); requestAnimationFrame(() => panelRef.current?.scrollTo({ top: 0 })) }}><NavList.LeadingVisual><Icon /></NavList.LeadingVisual>{label}<NavList.Description>{description}</NavList.Description></NavList.Item>)}</NavList></aside>
+      <nav className="settings-navigation" aria-label="Settings sections" role="tablist">{tabs.map(([id, label, description, Icon], index) => <button type="button" id={`settings-tab-${id}`} className={`settings-tab${tab === id ? ' active' : ''}`} key={id} ref={id === 'model' ? initialFocusRef : undefined} role="tab" tabIndex={tab === id ? 0 : -1} aria-selected={tab === id} aria-controls={`settings-panel-${id}`} onKeyDown={event => onTabKeyDown(event, index)} onClick={() => selectTab(id)}><Icon size={16} /><span><strong>{label}</strong><small>{description}</small></span></button>)}</nav>
       <main className="settings-panel" ref={panelRef}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}><LinkButton href="/api/export" target="_blank" leadingVisual={DownloadIcon}>Export data</LinkButton></div>
+        <div className="settings-panel-inner" id={`settings-panel-${tab}`} role="tabpanel" aria-labelledby={`settings-tab-${tab}`}><div className="settings-panel-actions"><LinkButton href="/api/export" target="_blank" leadingVisual={DownloadIcon}>Export data</LinkButton></div>
         {tab === 'model' && <ModelSettings models={models} settings={settings} runtime={runtime} draft={draft} update={update} onRefresh={onRefresh} onSelect={onSelect} onRuntime={onRuntime} onSave={onSave} busy={busy} />}
         {tab === 'resources' && <ResourceSettings resources={resources} onAdd={onAddResource} onEdit={onEditResource} onDuplicate={onDuplicateResource} onDelete={onDeleteResource} busy={busy} />}
         {tab === 'mcp' && <McpServers servers={mcpServers} providers={providers} onAdd={onAddMcpServer} onEdit={onEditMcpServer} onDuplicate={onDuplicateMcpServer} onDelete={onDeleteMcpServer} onRevoke={onRevokeMcpServer} onToggle={onToggleMcpServer} onTest={onTestMcpServer} onOAuth={onOAuthMcpServer} busy={busy} />}
         {tab === 'workspaces' && <WorkspaceSettings workspaces={workspaces} workspaceRoot={hostProfile?.paths?.home} onAdd={onAddWorkspace} onSelect={onSelectWorkspace} onDelete={onDeleteWorkspace} busy={busy} />}
         {tab === 'activity' && <ActivitySettings events={audit} onRefresh={onRefreshAudit} onClear={onClearAudit} />}
         {tab === 'performance' && <PerformanceSettings metrics={metrics} runtime={runtime} hostProfile={hostProfile} onRefresh={() => { onRefreshMetrics(); onRefreshHostProfile() }} onApplyRecommended={onApplyHostRecommendations} onPreset={onPreset} busy={busy} />}
-        {tab === 'data' && <DataSettings onBackup={onBackup} onRestore={onRestore} busy={busy} />}
+        {tab === 'data' && <DataSettings onBackup={onBackup} onRestore={onRestore} busy={busy} />}</div>
       </main>
     </div>
   </Dialog>

@@ -113,6 +113,34 @@ def test_mcp_server_secrets_are_masked_and_state_can_change() -> None:
         assert client.delete(f"/api/mcp-servers/{server['id']}").status_code == 200
 
 
+def test_multiple_accounts_for_the_same_mcp_provider_are_independent() -> None:
+    with TestClient(app) as client:
+        personal = client.post("/api/mcp-servers", json={
+            "name": "Gmail", "provider_id": "gmail", "account_label": "Personal",
+            "category": "Productivity", "transport": "streamable-http",
+            "endpoint": "https://mcp.example.test/gmail", "auth_type": "bearer",
+            "secrets": {"access_token": "personal-secret"},
+        })
+        work = client.post("/api/mcp-servers", json={
+            "name": "Gmail", "provider_id": "gmail", "account_label": "Work",
+            "category": "Productivity", "transport": "streamable-http",
+            "endpoint": "https://mcp.example.test/gmail", "auth_type": "bearer",
+            "secrets": {"access_token": "work-secret"},
+        })
+        assert personal.status_code == 201 and work.status_code == 201
+        assert personal.json()["id"] != work.json()["id"]
+        accounts = [item for item in client.get("/api/mcp-servers").json()["servers"] if item["provider_id"] == "gmail"]
+        assert {item["account_label"] for item in accounts} >= {"Personal", "Work"}
+        assert "personal-secret" not in client.get("/api/mcp-servers").text
+        assert "work-secret" not in client.get("/api/mcp-servers").text
+
+        assert client.delete(f"/api/mcp-servers/{personal.json()['id']}/credentials").status_code == 200
+        remaining = next(item for item in client.get("/api/mcp-servers").json()["servers"] if item["id"] == work.json()["id"])
+        assert remaining["has_secrets"] is True
+        client.delete(f"/api/mcp-servers/{personal.json()['id']}")
+        client.delete(f"/api/mcp-servers/{work.json()['id']}")
+
+
 def test_conversations_persist_search_archive_and_export() -> None:
     with TestClient(app) as client:
         created = client.post("/api/conversations", json={"title": "Trip research"})

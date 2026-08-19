@@ -63,11 +63,22 @@ button, input, textarea, select { font: inherit; }
 .context-chip small { margin-top: 2px; color: var(--fgColor-muted); font-size: 10px; }
 .composer-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; color: var(--fgColor-muted); font-size: 11px; }
 
-.primer-dialog-scroll { height: 100%; overflow: auto; }
-.settings-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 540px; height: min(76vh, 820px); }
-.settings-navigation { padding: 16px 12px; border-right: 1px solid var(--borderColor-default); background: var(--bgColor-muted); overflow-y: auto; }
-.settings-panel { min-width: 0; padding: 24px; overflow-y: auto; background: var(--bgColor-default); }
-.settings-section { width: 100%; max-width: 920px; }
+.settings-dialog { width: 100vw !important; max-width: none !important; height: 100dvh !important; max-height: none !important; border-radius: 0 !important; }
+.settings-dialog .primer-dialog-scroll { height: 100%; padding: 0 !important; overflow: hidden; }
+.settings-shell { display: grid; grid-template-rows: auto minmax(0, 1fr); width: 100%; min-height: 0; height: 100%; }
+.settings-navigation { display: flex; min-width: 0; padding: 0 24px; border-bottom: 1px solid var(--borderColor-default); background: var(--bgColor-muted); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.settings-tab { position: relative; display: flex; align-items: center; flex: 0 0 auto; gap: 8px; min-height: 58px; padding: 9px 14px; border: 0; color: var(--fgColor-muted); background: transparent; text-align: left; cursor: pointer; }
+.settings-tab::after { position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; border-radius: 2px 2px 0 0; background: transparent; content: ''; }
+.settings-tab:hover { color: var(--fgColor-default); background: var(--control-transparent-bgColor-hover, var(--bgColor-neutral-muted)); }
+.settings-tab.active { color: var(--fgColor-default); }
+.settings-tab.active::after { background: var(--underlineNav-borderColor-active, var(--borderColor-accent-emphasis)); }
+.settings-tab > span, .settings-tab strong, .settings-tab small { display: block; }
+.settings-tab strong { font-size: 13px; white-space: nowrap; }
+.settings-tab small { margin-top: 2px; color: var(--fgColor-muted); font-size: 10px; white-space: nowrap; }
+.settings-panel { min-width: 0; min-height: 0; padding: 28px clamp(18px, 4vw, 56px) 48px; overflow-x: hidden; overflow-y: auto; background: var(--bgColor-default); }
+.settings-panel-inner { width: min(100%, 1200px); margin: 0 auto; }
+.settings-panel-actions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.settings-section { width: 100%; }
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--borderColor-muted); }
 .section-heading h2, .section-heading h3 { margin: 0; font-size: 20px; }
 .section-heading p { max-width: 680px; margin: 5px 0 0; color: var(--fgColor-muted); font-size: 13px; }
@@ -134,13 +145,12 @@ button, input, textarea, select { font: inherit; }
   .composer-note { display: none; }
   .tool-approval { flex-direction: column; }
   .tool-approval-actions { width: 100%; justify-content: flex-end; }
-  .settings-shell { grid-template-columns: 1fr; height: 100%; }
-  .settings-navigation { padding: 8px; border-right: 0; border-bottom: 1px solid var(--borderColor-default); overflow-x: auto; overflow-y: hidden; }
-  .settings-navigation nav > [data-component="ActionList"] { display: flex; min-width: max-content; gap: 4px; }
-  .settings-navigation [data-component="ActionList.Item"] { flex: 0 0 auto; }
-  .settings-navigation [data-component="ActionList.Description"] { display: none; }
-  .settings-navigation [data-component="NavList.Item"] { white-space: nowrap; }
+  .settings-navigation { padding: 0 8px; }
+  .settings-tab { min-height: 48px; padding: 8px 11px; }
+  .settings-tab small { display: none; }
   .settings-panel { padding: 18px 14px; }
+  .section-heading { flex-direction: column; gap: 12px; }
+  .section-heading > .data-card-actions { width: 100%; justify-content: flex-start; }
   .form-grid, .permission-grid, .metric-grid { grid-template-columns: 1fr; }
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .data-card { flex-direction: column; }

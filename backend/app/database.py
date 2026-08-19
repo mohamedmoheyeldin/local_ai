@@ -66,6 +66,8 @@ def initialize_database() -> None:
             CREATE TABLE IF NOT EXISTS mcp_servers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
+                provider_id TEXT NOT NULL DEFAULT '',
+                account_label TEXT NOT NULL DEFAULT '',
                 category TEXT NOT NULL DEFAULT 'custom',
                 description TEXT NOT NULL DEFAULT '',
                 enabled INTEGER NOT NULL DEFAULT 0,
@@ -143,6 +145,8 @@ def initialize_database() -> None:
             pass
         columns = {row["name"] for row in database.execute("PRAGMA table_info(mcp_servers)").fetchall()}
         migrations = {
+            "provider_id": "TEXT NOT NULL DEFAULT ''",
+            "account_label": "TEXT NOT NULL DEFAULT ''",
             "permissions": "TEXT NOT NULL DEFAULT '{\"read\":true,\"write\":false,\"execute\":false,\"network\":false,\"always_confirm\":true}'",
             "connection_status": "TEXT NOT NULL DEFAULT 'not-tested'",
             "last_error": "TEXT NOT NULL DEFAULT ''",
@@ -312,7 +316,7 @@ def list_mcp_servers() -> list[dict[str, Any]]:
     with connection() as database:
         rows = database.execute(
             """
-            SELECT id, name, category, description, enabled, transport, endpoint,
+            SELECT id, name, provider_id, account_label, category, description, enabled, transport, endpoint,
                    command, arguments, working_directory, auth_type, public_config,
                    secret_config, permissions, connection_status, last_error,
                    capabilities, last_connected, created_at, updated_at
@@ -354,6 +358,8 @@ def get_mcp_server(server_id: int, include_secrets: bool = False) -> dict[str, A
 
 def create_mcp_server(values: dict[str, Any]) -> dict[str, Any]:
     database_values = {
+        "provider_id": "",
+        "account_label": "",
         **values,
         "enabled": int(bool(values.get("enabled"))),
         "public_config": json.dumps(values.get("public_config", {})),
@@ -368,10 +374,10 @@ def create_mcp_server(values: dict[str, Any]) -> dict[str, Any]:
         cursor = database.execute(
             """
             INSERT INTO mcp_servers(
-                name, category, description, enabled, transport, endpoint, command,
+                name, provider_id, account_label, category, description, enabled, transport, endpoint, command,
                 arguments, working_directory, auth_type, public_config, secret_config, permissions
             ) VALUES(
-                :name, :category, :description, :enabled, :transport, :endpoint, :command,
+                :name, :provider_id, :account_label, :category, :description, :enabled, :transport, :endpoint, :command,
                 :arguments, :working_directory, :auth_type, :public_config, :secret_config, :permissions
             )
             """,
@@ -387,7 +393,7 @@ def create_mcp_server(values: dict[str, Any]) -> dict[str, Any]:
 def update_mcp_server(server_id: int, values: dict[str, Any]) -> dict[str, Any]:
     get_mcp_server(server_id)
     allowed = (
-        "name", "category", "description", "transport", "endpoint", "command",
+        "name", "provider_id", "account_label", "category", "description", "transport", "endpoint", "command",
         "arguments", "working_directory", "auth_type",
     )
     assignments = [f"{key} = ?" for key in allowed if key in values]
@@ -417,10 +423,15 @@ def update_mcp_server(server_id: int, values: dict[str, Any]) -> dict[str, Any]:
 def duplicate_mcp_server(server_id: int) -> dict[str, Any]:
     current = get_mcp_server(server_id, include_secrets=True)
     values = {key: current[key] for key in (
-        "name", "category", "description", "transport", "endpoint", "command",
+        "name", "provider_id", "account_label", "category", "description", "transport", "endpoint", "command",
         "arguments", "working_directory", "auth_type", "public_config", "permissions",
     )}
-    values.update({"name": f"{values['name']} copy"[:120], "enabled": False, "secrets": current["secrets"]})
+    if values.get("provider_id"):
+        account_label = values.get("account_label") or "Account"
+        values["account_label"] = f"{account_label} copy"[:320]
+    else:
+        values["name"] = f"{values['name']} copy"[:120]
+    values.update({"enabled": False, "secrets": current["secrets"]})
     return create_mcp_server(values)
 
 
