@@ -96,6 +96,35 @@ test('chat shows automatic web research before local generation', async ({ page 
   await expect(page.getByText('Chats stay local. Web research shares only the current question with public search providers.')).toHaveCount(1)
 })
 
+test('local file and command tools show exact approval before execution', async ({ page }) => {
+  await page.route('**/api/runtime', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ state: 'ready', healthy: true, endpoint: 'http://127.0.0.1:8180', model: { display_name: 'Test model' } }),
+  }))
+  let chatCalls = 0
+  await page.route('**/api/chat/stream', route => {
+    chatCalls += 1
+    const body = chatCalls === 1
+      ? `${JSON.stringify({ type: 'approval', local: true, server_name: 'Local workspace', tool_name: 'local_write_file', arguments: { path: 'hello.txt', content: 'Hello' } })}\n`
+      : `${JSON.stringify({ type: 'token', content: 'Created hello.txt successfully.' })}\n${JSON.stringify({ type: 'done', usage: {} })}\n`
+    return route.fulfill({ contentType: 'application/x-ndjson', body })
+  })
+  await page.route('**/api/local-tools/call', async route => {
+    const request = route.request().postDataJSON()
+    expect(request.approved).toBe(true)
+    expect(request.arguments).toEqual({ path: 'hello.txt', content: 'Hello' })
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ result: { path: 'hello.txt', created: true } }) })
+  })
+  await page.goto('/')
+  await page.getByLabel('Message Local AI').fill('Create hello.txt')
+  await page.getByRole('button', { name: 'Send message' }).click()
+  await expect(page.getByText('Allow Local workspace to run local_write_file?')).toBeVisible()
+  await expect(page.getByText('This can change files or run a command on this computer.')).toBeVisible()
+  await expect(page.locator('.tool-approval code')).toContainText('hello.txt')
+  await page.getByRole('button', { name: 'Allow once' }).click()
+  await expect(page.getByText('Created hello.txt successfully.')).toBeVisible()
+})
+
 test('light and dark themes are available and persist', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Theme' }).click()
@@ -114,11 +143,11 @@ test('advanced local settings are accessible and responsive', async ({ page }) =
   const dialog = page.getByRole('dialog', { name: 'Settings' })
   await dialog.getByRole('tab', { name: /Workspaces/ }).click()
   await expect(dialog.getByRole('heading', { name: 'Approved workspaces' })).toBeVisible()
-  await expect(dialog.getByText('Only folders you explicitly approve can be used for repository context or Cloud handoff.')).toBeVisible()
+  await expect(dialog.getByText('The selected folder is available to Local AI for repository context, file changes, and approved commands. Every local action still requires Allow once in chat.')).toBeVisible()
   await expect(dialog.getByRole('textbox', { name: 'Workspace name' })).toHaveAttribute('placeholder', 'My project')
   await expect(dialog.getByRole('textbox', { name: 'Project folder' })).toHaveAttribute('placeholder', /Projects[\\/]my-project$/)
   await dialog.getByRole('tab', { name: /Activity/ }).click()
-  await expect(dialog.getByRole('heading', { name: 'MCP activity' })).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Tool activity' })).toBeVisible()
   await dialog.getByRole('tab', { name: /Performance/ }).click()
   await expect(dialog.getByRole('heading', { name: 'Host & performance' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Apply best settings for this computer' })).toBeVisible()

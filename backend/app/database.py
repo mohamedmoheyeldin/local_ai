@@ -454,7 +454,7 @@ def update_mcp_connection(server_id: int, status: str, capabilities: dict[str, A
         )
 
 
-def record_tool_audit(server_id: int, tool_name: str, arguments: dict[str, Any], outcome: str, detail: str = "") -> None:
+def record_tool_audit(server_id: int | None, tool_name: str, arguments: dict[str, Any], outcome: str, detail: str = "") -> None:
     with connection() as database:
         database.execute(
             "INSERT INTO tool_audit(server_id, tool_name, arguments, outcome, detail) VALUES(?, ?, ?, ?, ?)",
@@ -465,7 +465,7 @@ def record_tool_audit(server_id: int, tool_name: str, arguments: dict[str, Any],
 def list_tool_audit(limit: int = 100) -> list[dict[str, Any]]:
     with connection() as database:
         rows = database.execute(
-            """SELECT a.id, a.server_id, COALESCE(s.name, 'Removed server') AS server_name,
+            """SELECT a.id, a.server_id, CASE WHEN a.server_id IS NULL THEN 'Local workspace' ELSE COALESCE(s.name, 'Removed server') END AS server_name,
                a.tool_name, a.arguments, a.outcome, a.detail, a.created_at
                FROM tool_audit a LEFT JOIN mcp_servers s ON s.id = a.server_id
                ORDER BY a.id DESC LIMIT ?""",

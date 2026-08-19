@@ -11,7 +11,7 @@ const tabs = [
   ['resources', 'Local resources', 'Websites, accounts, services', PersonIcon],
   ['mcp', 'MCP servers', 'Tools, data, integrations', ServerIcon],
   ['workspaces', 'Workspaces', 'Approved project folders', RepoIcon],
-  ['activity', 'Activity', 'MCP audit and access', ShieldLockIcon],
+  ['activity', 'Activity', 'Local and MCP tool history', ShieldLockIcon],
   ['performance', 'Performance', 'GPU, speed, presets', PulseIcon],
   ['data', 'Backup', 'Encrypted recovery', ArchiveIcon],
 ]

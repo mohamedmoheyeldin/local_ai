@@ -11,7 +11,7 @@ export function WorkspaceSettings({ workspaces, workspaceRoot, onAdd, onSelect, 
     ? `${normalizedRoot}${separator}Projects${separator}my-project`
     : 'Choose a project folder inside your home directory'
   return <div className="settings-section">
-    <SectionHeading title="Approved workspaces" description="Only folders you explicitly approve can be used for repository context or Cloud handoff." />
+    <SectionHeading title="Approved workspaces" description="The selected folder is available to Local AI for repository context, file changes, and approved commands. Every local action still requires Allow once in chat." />
     <form onSubmit={async event => { event.preventDefault(); if (await onAdd(draft)) setDraft({ name: '', path: '' }) }}>
       <div className="form-grid"><Field label="Workspace name" caption="Use a short name you will recognize, such as Work app or Personal project." required><TextInput block value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="My project" /></Field><Field label="Project folder" caption="Enter the full path to a folder inside your home directory." required><TextInput block value={draft.path} onChange={event => setDraft({ ...draft, path: event.target.value })} placeholder={folderExample} /></Field></div>
       <FormActions><Button variant="primary" type="submit" disabled={busy}>Approve workspace</Button></FormActions>
@@ -22,8 +22,8 @@ export function WorkspaceSettings({ workspaces, workspaceRoot, onAdd, onSelect, 
 
 export function ActivitySettings({ events, onRefresh, onClear }) {
   return <div className="settings-section">
-    <SectionHeading title="MCP activity" description="Review approvals, completed tools, denials, failures, and access used." actions={<><Button size="small" leadingVisual={SyncIcon} onClick={onRefresh}>Refresh</Button><Button size="small" variant="danger" leadingVisual={TrashIcon} onClick={onClear}>Clear</Button></>} />
-    <div className="data-list">{events.length === 0 && <EmptyState title="No tool activity" description="MCP tool activity will appear here." />}{events.map(event => <details className="audit-event" key={event.id}><summary><strong>{event.server_name} · {event.tool_name}</strong><span>{event.outcome} · {event.created_at}</span></summary><pre>{JSON.stringify(event.arguments, null, 2)}</pre>{event.detail && <Flash variant="danger">{event.detail}</Flash>}</details>)}</div>
+    <SectionHeading title="Tool activity" description="Review local workspace and MCP approvals, completed actions, denials, failures, and access used." actions={<><Button size="small" leadingVisual={SyncIcon} onClick={onRefresh}>Refresh</Button><Button size="small" variant="danger" leadingVisual={TrashIcon} onClick={onClear}>Clear</Button></>} />
+    <div className="data-list">{events.length === 0 && <EmptyState title="No tool activity" description="Approved local and MCP actions will appear here." />}{events.map(event => <details className="audit-event" key={event.id}><summary><strong>{event.server_name} · {event.tool_name}</strong><span>{event.outcome} · {event.created_at}</span></summary><pre>{JSON.stringify(event.arguments, null, 2)}</pre>{event.detail && <Flash variant="danger">{event.detail}</Flash>}</details>)}</div>
   </div>
 }
 

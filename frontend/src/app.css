@@ -68,7 +68,8 @@ button, input, textarea, select { font: inherit; }
 .composer-wrap { width: min(100%, 900px); margin: 0 auto; }
 .composer-alert { margin-bottom: 8px; }
 .tool-approval { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 10px; padding: 12px; border: 1px solid var(--borderColor-attention-emphasis); border-radius: var(--borderRadius-medium); background: var(--bgColor-attention-muted); }
-.tool-approval code { display: block; max-width: 620px; margin-top: 5px; overflow: hidden; color: var(--fgColor-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.tool-approval span { display: block; margin-top: 3px; color: var(--fgColor-muted); font-size: 12px; }
+.tool-approval code { display: block; max-width: 620px; max-height: 180px; margin-top: 7px; overflow: auto; color: var(--fgColor-muted); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tool-approval-actions { display: flex; flex: 0 0 auto; gap: 8px; }
 .composer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; padding: 8px; border: 0; border-radius: 16px; background: var(--bgColor-muted); box-shadow: 0 10px 28px rgba(1, 4, 9, .18); transition: background-color 120ms ease, box-shadow 120ms ease; }
 .composer:focus-within { background: color-mix(in srgb, var(--bgColor-muted) 88%, var(--bgColor-default)); box-shadow: 0 14px 36px rgba(1, 4, 9, .28); }

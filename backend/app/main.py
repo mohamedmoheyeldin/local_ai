@@ -73,6 +73,7 @@ from .services.context_index import (
     list_sources as list_context_sources,
 )
 from .services.web_research import research_web
+from .services.local_tools import TOOL_DEFINITIONS, execute_local_tool
 
 _indexing_slots = asyncio.Semaphore(max(1, min(2, (os.cpu_count() or 2) // 4)))
 
@@ -176,6 +177,13 @@ class McpServerState(BaseModel):
 
 class McpToolCall(BaseModel):
     tool_name: str = Field(min_length=1, max_length=300)
+    arguments: dict = Field(default_factory=dict)
+    approved: bool = False
+    conversation_id: str | None = Field(default=None, max_length=64)
+
+
+class LocalToolCall(BaseModel):
+    tool_name: str = Field(min_length=1, max_length=100)
     arguments: dict = Field(default_factory=dict)
     approved: bool = False
     conversation_id: str | None = Field(default=None, max_length=64)
@@ -557,6 +565,38 @@ async def call_mcp_tool(server_id: int, request: McpToolCall) -> dict:
         raise HTTPException(502, f"MCP tool call failed: {exc}") from exc
 
 
+@app.post("/api/local-tools/call")
+async def call_local_tool(request: LocalToolCall) -> dict:
+    selected = next((item for item in list_workspaces() if item["selected"] and item["approved"]), None)
+    if not selected:
+        raise HTTPException(409, "Select an approved workspace before using local tools")
+    if not request.approved:
+        record_tool_audit(None, request.tool_name, request.arguments, "approval-required")
+        raise HTTPException(409, {
+            "code": "approval_required", "server": "Local workspace",
+            "tool": request.tool_name, "arguments": request.arguments,
+        })
+    if request.tool_name not in {tool["name"] for tool in TOOL_DEFINITIONS}:
+        record_tool_audit(None, request.tool_name, request.arguments, "denied", "Unknown local tool")
+        raise HTTPException(400, "Unknown local tool")
+    try:
+        result = await run_in_threadpool(execute_local_tool, selected["path"], request.tool_name, request.arguments)
+        record_tool_audit(None, request.tool_name, request.arguments, "completed")
+        message = None
+        if request.conversation_id:
+            message = add_conversation_message(
+                request.conversation_id, "tool", json.dumps(result, ensure_ascii=False),
+                {"server_name": "Local workspace", "tool_name": request.tool_name},
+            )
+        return {"result": result, "message": message}
+    except subprocess.TimeoutExpired as exc:
+        record_tool_audit(None, request.tool_name, request.arguments, "error", f"Timed out after {exc.timeout} seconds")
+        raise HTTPException(408, f"Command timed out after {exc.timeout} seconds") from exc
+    except (OSError, UnicodeError, ValueError) as exc:
+        record_tool_audit(None, request.tool_name, request.arguments, "error", str(exc))
+        raise HTTPException(400, f"Local tool failed: {exc}") from exc
+
+
 @app.post("/api/mcp-servers/{server_id}/oauth/start")
 async def start_mcp_oauth(server_id: int, request: Request) -> dict:
     try:
@@ -900,6 +940,22 @@ def prepare_chat(request: ChatRequest) -> tuple[dict, dict]:
     }
     tool_map = {}
     tools = []
+    selected_workspace = next((item for item in list_workspaces() if item["selected"] and item["approved"]), None)
+    if selected_workspace:
+        messages.insert(0, {
+            "role": "system",
+            "content": (
+                f"The user approved this local workspace: {selected_workspace['path']}. "
+                "You can use the supplied local tools to inspect it, create or change files, remove or move paths, and run commands. "
+                "Use tools when the task requires real local action. Never claim an action succeeded until its tool result confirms it. "
+                "Each action is shown to the user for approval before execution. Keep file paths workspace-relative when possible."
+            ),
+        })
+        for tool in TOOL_DEFINITIONS:
+            tool_map[tool["name"]] = {
+                "local": True, "server_name": "Local workspace", "tool_name": tool["name"],
+            }
+            tools.append({"type": "function", "function": tool})
     for server in list_mcp_servers():
         if not server["enabled"] or not server.get("permissions", {}).get("execute"):
             continue

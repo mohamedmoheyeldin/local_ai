@@ -24,6 +24,9 @@ large user-supplied component is a licensed `.gguf` model.
 - Streaming chat with stop-generation, archive/delete, search, and secret-free JSON export
 - Automatic public web research before every chat reply, with current-date context,
   source links, short-lived caching, bounded page retrieval, and private-network blocking
+- Model-initiated local workspace tools for listing and reading files, creating folders,
+  writing or editing files, moving or deleting paths, and running shell commands; every
+  action requires explicit one-time approval and file operations stay inside the selected workspace
 - Multi-file and folder context attachments with private local copies, PDF/Office/text
   extraction, SQLite full-text indexing, relevant-chunk retrieval, and per-file removal
 - Local-first Cloud handoff with a progress state, capped Git/chat context, editable preview, and copy
@@ -38,7 +41,7 @@ large user-supplied component is a licensed `.gguf` model.
 - Guided OAuth configuration for GitHub, Gmail, Google Drive, Outlook, OneDrive,
   and Dropbox; provider registration and an MCP endpoint are still required
 - Approved repository workspaces for Git-aware Cloud handoff context
-- MCP activity history with native expandable tool messages in chat
+- Local and MCP activity history with native expandable tool messages in chat
 - Passphrase-encrypted `.laibak` backup and guarded configuration/conversation restore
 - Live generation-speed and NVIDIA GPU telemetry with balanced, speed, quality,
   and low-memory presets
