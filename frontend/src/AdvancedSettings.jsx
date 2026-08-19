@@ -5,13 +5,18 @@ import { DataCard, DeleteButton, EmptyState, Field, FormActions, MetricCard, Sec
 
 export function WorkspaceSettings({ workspaces, workspaceRoot, onAdd, onSelect, onDelete, busy }) {
   const [draft, setDraft] = useState({ name: '', path: '' })
+  const separator = workspaceRoot?.includes('\\') ? '\\' : '/'
+  const normalizedRoot = workspaceRoot?.replace(/[\\/]+$/, '')
+  const folderExample = normalizedRoot
+    ? `${normalizedRoot}${separator}Projects${separator}my-project`
+    : 'Choose a project folder inside your home directory'
   return <div className="settings-section">
-    <SectionHeading title="Approved workspaces" description={`Local AI and Cloud handoff can inspect only folders you approve under ${workspaceRoot || 'your user folder'}.`} />
+    <SectionHeading title="Approved workspaces" description="Only folders you explicitly approve can be used for repository context or Cloud handoff." />
     <form onSubmit={async event => { event.preventDefault(); if (await onAdd(draft)) setDraft({ name: '', path: '' }) }}>
-      <div className="form-grid"><Field label="Name" required><TextInput block value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Portfolio" /></Field><Field label="Folder" required><TextInput block value={draft.path} onChange={event => setDraft({ ...draft, path: event.target.value })} placeholder={workspaceRoot ? `${workspaceRoot}${workspaceRoot.includes('\\') ? '\\' : '/'}project` : 'Choose a folder inside your user directory'} /></Field></div>
+      <div className="form-grid"><Field label="Workspace name" caption="Use a short name you will recognize, such as Work app or Personal project." required><TextInput block value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="My project" /></Field><Field label="Project folder" caption="Enter the full path to a folder inside your home directory." required><TextInput block value={draft.path} onChange={event => setDraft({ ...draft, path: event.target.value })} placeholder={folderExample} /></Field></div>
       <FormActions><Button variant="primary" type="submit" disabled={busy}>Approve workspace</Button></FormActions>
     </form>
-    <div className="data-list">{workspaces.length === 0 && <EmptyState title="No approved workspaces" description="Approve a project folder to use repository context and Cloud handoff." />}{workspaces.map(item => <DataCard key={item.id} title={item.name} label={item.selected ? 'Selected' : null} meta={item.path} actions={<>{!item.selected && <Button size="small" onClick={() => onSelect(item.id)}>Select</Button>}<DeleteButton onClick={() => onDelete(item.id)} /></>} />)}</div>
+    <div className="data-list">{workspaces.length === 0 && <EmptyState title="No approved workspaces" description="Add a project folder when you want Local AI to use its files for repository context or Cloud handoff." />}{workspaces.map(item => <DataCard key={item.id} title={item.name} label={item.selected ? 'Selected' : null} meta={item.path} actions={<>{!item.selected && <Button size="small" onClick={() => onSelect(item.id)}>Select</Button>}<DeleteButton onClick={() => onDelete(item.id)} /></>} />)}</div>
   </div>
 }
 
