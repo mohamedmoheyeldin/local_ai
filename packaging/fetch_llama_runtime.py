@@ -18,7 +18,7 @@ API = "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest"
 def _request(url: str):
     return urllib.request.urlopen(urllib.request.Request(
         url,
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "Portable-Local-AI-Packager"},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "Local-AI-Packager"},
     ), timeout=120)
 
 
@@ -55,7 +55,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.system == "linux" and args.backend == "cuda12":
-        raise SystemExit("Official Linux release assets do not currently provide a portable CUDA archive")
+        raise SystemExit("Official Linux release assets do not currently provide a self-contained CUDA archive")
 
     with _request(API) as response:
         release = json.load(response)
@@ -68,7 +68,7 @@ def main() -> None:
         raise SystemExit("The official llama.cpp release asset did not provide a SHA-256 digest")
 
     args.output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="portable-local-ai-llama-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="local-ai-llama-") as temporary:
         archive = Path(temporary) / f"runtime{extension}"
         digest = hashlib.sha256()
         with _request(asset["browser_download_url"]) as response, archive.open("wb") as target:

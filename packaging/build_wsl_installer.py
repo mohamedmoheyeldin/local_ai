@@ -24,13 +24,13 @@ def main() -> None:
         raise SystemExit("Version must be a safe semantic version such as 1.2.0")
     root = Path(__file__).resolve().parents[1]
     wsl = root / "packaging" / "wsl"
-    if not (args.bundle / "portable-local-ai").is_file():
+    if not (args.bundle / "local-ai").is_file():
         raise SystemExit("Compiled WSL application bundle is missing")
 
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
         add_tree(archive, args.bundle, "app")
-        for name in ("install.sh", "register-startup.ps1", "portable-local-ai.service.in"):
+        for name in ("install.sh", "register-startup.ps1", "local-ai.service.in"):
             archive.add(wsl / name, arcname=name)
         payload = args.version.encode()
         info = tarfile.TarInfo("VERSION")

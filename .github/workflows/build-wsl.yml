@@ -20,8 +20,8 @@ jobs:
   build-wsl:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
           cache: pip
@@ -29,7 +29,7 @@ jobs:
             backend/requirements.txt
             packaging/requirements.txt
       - uses: pnpm/setup@v2
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -47,26 +47,32 @@ jobs:
       - name: Bundle verified llama.cpp CPU fallback
         run: python packaging/fetch_llama_runtime.py --system linux --architecture x64 --backend cpu --output packaging/runtime
       - name: Compile self-contained application
-        run: pyinstaller --noconfirm --clean packaging/portable-local-ai.spec
+        run: pyinstaller --noconfirm --clean packaging/local-ai.spec
       - name: Smoke-test compiled application
         run: |
-          export LOCAL_AI_DATA_DIR="$RUNNER_TEMP/portable-local-ai-data"
-          export LOCAL_AI_MODELS_DIR="$RUNNER_TEMP/portable-local-ai-models"
-          dist/portable-local-ai/portable-local-ai --initialize
+          export LOCAL_AI_DATA_DIR="$RUNNER_TEMP/local-ai-data"
+          export LOCAL_AI_MODELS_DIR="$RUNNER_TEMP/local-ai-models"
+          dist/local-ai/local-ai --initialize
           test -s "$LOCAL_AI_DATA_DIR/local-ai.db"
-          test -x dist/portable-local-ai/_internal/runtime/llama-server
-      - name: Build and exercise the single-file WSL installer
+          test -x dist/local-ai/_internal/runtime/llama-server
+      - name: Build and exercise the full WSL system installer
         run: |
-          python packaging/build_wsl_installer.py --bundle dist/portable-local-ai --version "$RELEASE_VERSION" --output "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run"
-          test_home="$RUNNER_TEMP/wsl-installer-home"
-          mkdir -p "$test_home"
-          HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run"
-          HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" PORTABLE_LOCAL_AI_TEST_MODE=1 "release/Portable-Local-AI-WSL-Setup-$RELEASE_VERSION.run" --uninstall
-      - uses: actions/upload-artifact@v4
+          python packaging/build_wsl_installer.py --bundle dist/local-ai --version "$RELEASE_VERSION" --output "release/Local-AI-WSL-Setup-$RELEASE_VERSION.run"
+          test_root="$RUNNER_TEMP/wsl-system-root"
+          mkdir -p "$test_root"
+          LOCAL_AI_INSTALLER_TEST_MODE=1 LOCAL_AI_INSTALLER_TEST_ROOT="$test_root" "release/Local-AI-WSL-Setup-$RELEASE_VERSION.run"
+          test -x "$test_root/opt/local-ai/current/local-ai"
+          test -L "$test_root/usr/local/bin/local-ai"
+          test -s "$test_root/var/lib/local-ai/local-ai.db"
+          test -s "$test_root/etc/systemd/system/local-ai.service"
+          LOCAL_AI_INSTALLER_TEST_MODE=1 LOCAL_AI_INSTALLER_TEST_ROOT="$test_root" "release/Local-AI-WSL-Setup-$RELEASE_VERSION.run" --uninstall
+          test ! -e "$test_root/opt/local-ai"
+          test -d "$test_root/var/lib/local-ai"
+      - uses: actions/upload-artifact@v7
         with:
           name: wsl-installer
           path: |
-            release/Portable-Local-AI-WSL-Setup-*.run
-            release/Portable-Local-AI-WSL-Setup-*.run.sha256
+            release/Local-AI-WSL-Setup-*.run
+            release/Local-AI-WSL-Setup-*.run.sha256
           if-no-files-found: error
           retention-days: 14

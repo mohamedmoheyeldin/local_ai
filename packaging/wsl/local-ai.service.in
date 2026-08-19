@@ -1,11 +1,16 @@
 [Unit]
-Description=Portable Local AI
+Description=Local AI
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__DATA_DIR__
+Environment=LOCAL_AI_DATA_DIR=__DATA_DIR__
+Environment=LOCAL_AI_MODELS_DIR=__MODELS_DIR__
 ExecStart=__EXECUTABLE__ --no-browser
 Restart=on-failure
 RestartSec=4
@@ -14,4 +19,4 @@ KillSignal=SIGINT
 UMask=0077
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

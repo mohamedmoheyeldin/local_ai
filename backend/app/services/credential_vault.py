@@ -9,7 +9,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from ..config import DATA_DIR, ensure_directories
 
-SERVICE_NAME = "portable-local-ai"
+SERVICE_NAME = "local-ai"
 
 
 class CredentialVault:

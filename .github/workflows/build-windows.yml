@@ -28,8 +28,8 @@ jobs:
       SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
       SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
           cache: pip
@@ -37,7 +37,7 @@ jobs:
             backend/requirements.txt
             packaging/requirements.txt
       - uses: pnpm/setup@v2
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
@@ -56,13 +56,13 @@ jobs:
       - name: Bundle verified llama.cpp CPU fallback
         run: python packaging/fetch_llama_runtime.py --system windows --architecture x64 --backend cpu --output packaging/runtime
       - name: Compile self-contained application
-        run: pyinstaller --noconfirm --clean packaging/portable-local-ai.spec
+        run: pyinstaller --noconfirm --clean packaging/local-ai.spec
       - name: Smoke-test compiled application
         shell: pwsh
         run: |
-          $env:LOCAL_AI_DATA_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-data'
-          $env:LOCAL_AI_MODELS_DIR = Join-Path $env:RUNNER_TEMP 'portable-local-ai-models'
-          & .\dist\portable-local-ai\portable-local-ai-cli.exe --initialize
+          $env:LOCAL_AI_DATA_DIR = Join-Path $env:RUNNER_TEMP 'local-ai-data'
+          $env:LOCAL_AI_MODELS_DIR = Join-Path $env:RUNNER_TEMP 'local-ai-models'
+          & .\dist\local-ai\local-ai-cli.exe --initialize
           if ($LASTEXITCODE -ne 0) {
             $errorLog = Join-Path $env:LOCAL_AI_DATA_DIR 'runtime\logs\launcher-error.log'
             if (Test-Path $errorLog) { Get-Content $errorLog }
@@ -73,12 +73,12 @@ jobs:
         if: env.SIGNING_CERT_BASE64 != ''
         shell: pwsh
         run: |
-          $certificate = Join-Path $env:RUNNER_TEMP 'portable-local-ai-signing.pfx'
+          $certificate = Join-Path $env:RUNNER_TEMP 'local-ai-signing.pfx'
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:SIGNING_CERT_BASE64))
           try {
             $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
             if (-not $signtool) { throw 'signtool.exe was not found' }
-            & $signtool.FullName sign /fd SHA256 /td SHA256 /tr https://timestamp.digicert.com /f $certificate /p $env:SIGNING_CERT_PASSWORD .\dist\portable-local-ai\portable-local-ai.exe
+            & $signtool.FullName sign /fd SHA256 /td SHA256 /tr https://timestamp.digicert.com /f $certificate /p $env:SIGNING_CERT_PASSWORD .\dist\local-ai\local-ai.exe
             if ($LASTEXITCODE -ne 0) { throw 'Application signing failed' }
           } finally { Remove-Item $certificate -Force -ErrorAction SilentlyContinue }
       - name: Install Inno Setup compiler
@@ -88,32 +88,45 @@ jobs:
         shell: pwsh
         run: |
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
-          & $iscc "/DAppVersion=$env:RELEASE_VERSION" "/DAppVersionNumeric=$env:RELEASE_VERSION_NUMERIC" "/DBundleDir=$pwd\dist\portable-local-ai" packaging\windows\installer.iss
+          & $iscc "/DAppVersion=$env:RELEASE_VERSION" "/DAppVersionNumeric=$env:RELEASE_VERSION_NUMERIC" "/DBundleDir=$pwd\dist\local-ai" packaging\windows\installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed' }
       - name: Sign and verify Windows installer
         if: env.SIGNING_CERT_BASE64 != ''
         shell: pwsh
         run: |
-          $certificate = Join-Path $env:RUNNER_TEMP 'portable-local-ai-signing.pfx'
+          $certificate = Join-Path $env:RUNNER_TEMP 'local-ai-signing.pfx'
           [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:SIGNING_CERT_BASE64))
           try {
             $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
-            $installer = Get-ChildItem release\Portable-Local-AI-Windows-Setup-*.exe | Select-Object -First 1
+            $installer = Get-ChildItem release\Local-AI-Windows-Setup-*.exe | Select-Object -First 1
             & $signtool.FullName sign /fd SHA256 /td SHA256 /tr https://timestamp.digicert.com /f $certificate /p $env:SIGNING_CERT_PASSWORD $installer.FullName
             if ($LASTEXITCODE -ne 0) { throw 'Installer signing failed' }
             if ((Get-AuthenticodeSignature $installer.FullName).Status -ne 'Valid') { throw 'Installer signature validation failed' }
           } finally { Remove-Item $certificate -Force -ErrorAction SilentlyContinue }
+      - name: Smoke-test full Windows installation
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release\Local-AI-Windows-Setup-*.exe | Select-Object -First 1
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-') -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Windows installation failed with exit code $($install.ExitCode)" }
+          $installDirectory = Join-Path $env:ProgramFiles 'Local AI'
+          if (-not (Test-Path (Join-Path $installDirectory 'local-ai.exe'))) { throw 'Application was not installed under Program Files' }
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'Local AI\local-ai.db'))) { throw 'Private application data was not initialized under LocalAppData' }
+          $uninstaller = Join-Path $installDirectory 'unins000.exe'
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Windows uninstall failed with exit code $($uninstall.ExitCode)" }
+          if (Test-Path $installDirectory) { throw 'Application files remained after uninstall' }
       - name: Create checksum
         shell: pwsh
         run: |
-          $file = Get-ChildItem release\Portable-Local-AI-Windows-Setup-*.exe | Select-Object -First 1
+          $file = Get-ChildItem release\Local-AI-Windows-Setup-*.exe | Select-Object -First 1
           $hash = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
           "$hash  $($file.Name)" | Set-Content -Encoding ascii "$($file.FullName).sha256"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: |
-            release/Portable-Local-AI-Windows-Setup-*.exe
-            release/Portable-Local-AI-Windows-Setup-*.exe.sha256
+            release/Local-AI-Windows-Setup-*.exe
+            release/Local-AI-Windows-Setup-*.exe.sha256
           if-no-files-found: error
           retention-days: 14

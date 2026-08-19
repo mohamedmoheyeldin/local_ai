@@ -1,4 +1,4 @@
-"""Portable Local AI application package."""
+"""Local AI application package."""
 
 from ._build_version import __version__
 

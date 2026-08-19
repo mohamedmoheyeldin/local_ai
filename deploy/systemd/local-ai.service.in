@@ -1,5 +1,5 @@
 [Unit]
-Description=Portable Local AI React and FastAPI Application
+Description=Local AI React and FastAPI Application
 Documentation=file://__PROJECT_DIR__/README.md
 After=network-online.target
 Wants=network-online.target
@@ -20,7 +20,7 @@ KillSignal=SIGINT
 UMask=0077
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=portable-local-ai
+SyslogIdentifier=local-ai
 
 [Install]
 WantedBy=default.target

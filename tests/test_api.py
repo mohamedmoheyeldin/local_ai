@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-TEST_ROOT = Path(tempfile.mkdtemp(prefix="portable-local-ai-tests-"))
+TEST_ROOT = Path(tempfile.mkdtemp(prefix="local-ai-tests-"))
 os.environ["LOCAL_AI_DATA_DIR"] = str(TEST_ROOT / "data")
 os.environ["LOCAL_AI_MODELS_DIR"] = str(TEST_ROOT / "models")
 os.environ["LOCAL_AI_DATABASE"] = str(TEST_ROOT / "data" / "test.db")
